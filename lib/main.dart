@@ -78,83 +78,108 @@ class _LoginPageState extends State<LoginPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
-        // StreamBuilder in MyApp will handle navigation
-      } on FirebaseAuthException catch (e) {
-        String message = e.message ?? "An error occurred (${e.code})";
-        SnackBarAction? action;
 
-        if (e.code == 'user-not-found') {
-          message = "No user found for that email.";
-        } else if (e.code == 'wrong-password') {
-          message = "Wrong password provided.";
-        } else if (e.code == 'internal-error') {
-          // ATTEMPT MANUAL AUTH FALLBACK
-          try {
-            String email = _emailController.text.trim();
-            var bytes = utf8.encode(_passwordController.text.trim());
-            var digest = sha256.convert(bytes);
-            String inputHash = digest.toString();
-
-            var query = await FirebaseFirestore.instance
-                .collection('shops')
-                .where('email', isEqualTo: email)
-                .limit(1)
-                .get();
-
-            if (query.docs.isNotEmpty) {
-              var storedHash = query.docs.first['encrypted_password_storage'];
-              if (storedHash == inputHash) {
-                if (mounted) {
-                  debugPrint("MANUAL AUTH SUCCESS: Bypassing Firebase Auth");
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          DashboardPage(uid: query.docs.first.id),
-                    ),
-                  );
-                  return; // Exit
-                }
-              }
+        // STRICT CHECK: Ensure Shop Data Exists
+        // If we are here, Firebase says "Login Success". But user says "without find shop details login not possible".
+        // So we must check.
+        User? currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          var shopDoc = await FirebaseFirestore.instance
+              .collection('shops')
+              .doc(currentUser.uid)
+              .get();
+          if (!shopDoc.exists) {
+            await FirebaseAuth.instance.signOut();
+            if (mounted) {
+              throw FirebaseAuthException(
+                code: 'no-shop-data',
+                message:
+                    "Account exists but Shop Details are missing. Please Register.",
+              );
             }
-          } catch (manualErr) {
-            debugPrint("Manual Auth Failed: $manualErr");
+          }
+        }
+        // If shopDoc exists, StreamBuilder handles navigation.
+      } catch (e) {
+        String firebaseError = e.toString();
+        debugPrint("Standard Login Failed: $firebaseError");
+
+        // UNIVERSAL MANUAL AUTH FALLBACK
+        bool manualAuthSuccess = false;
+        try {
+          String email = _emailController.text.trim();
+          var bytes = utf8.encode(_passwordController.text.trim());
+          var digest = sha256.convert(bytes);
+          String inputHash = digest.toString();
+
+          debugPrint("Attempting Manual Auth for: $email");
+
+          var query = await FirebaseFirestore.instance
+              .collection('shops')
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+
+          if (query.docs.isNotEmpty) {
+            var storedHash = query.docs.first['encrypted_password_storage'];
+            if (storedHash == inputHash) {
+              manualAuthSuccess = true;
+              if (mounted) {
+                // We implicitly know shop data exists here because we queried it found it!
+                debugPrint("MANUAL AUTH SUCCESS: Bypassing Firebase Auth");
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        DashboardPage(uid: query.docs.first.id),
+                  ),
+                );
+                return; // Exit successfully
+              }
+            } else {
+              debugPrint("Manual Auth Failed: Hash mismatch.");
+            }
+          } else {
+            debugPrint("Manual Auth Failed: Email not found in DB.");
+          }
+        } catch (manualErr) {
+          debugPrint("Manual Auth Error: $manualErr");
+        }
+
+        // DELETED DEV BYPASS HERE (Strict mode)
+
+        if (mounted) {
+          String displayError = manualAuthSuccess
+              ? "Success"
+              : "Login Failed. Check credentials.";
+
+          if (firebaseError.contains("no-shop-data")) {
+            displayError = "Shop Details Missing. Please Register again.";
+          } else if (firebaseError.contains("internal-error") ||
+              firebaseError.contains("CONFIGURATION_NOT_FOUND")) {
+            displayError =
+                "Auth Config Error. Manual Check also failed (Wrong Password).";
           }
 
-          if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(displayError), backgroundColor: Colors.red),
+          );
+
+          if (!manualAuthSuccess &&
+              (firebaseError.contains("internal-error") ||
+                  firebaseError.contains("CONFIGURATION_NOT_FOUND"))) {
             showDialog(
               context: context,
-              barrierDismissible: false,
+              barrierDismissible: true,
               builder: (context) => AlertDialog(
-                title: const Text(
-                  'Login Failed: Auth Config',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                title: const Text('Auth Error'),
                 content: const Text(
-                  "Standard Login Failed.\n"
-                  "Manual Database Check also failed (Wrong password or No data).\n\n"
-                  "To Fix Standard Login:\n"
-                  "1. Click FIX AUTH NOW.\n"
-                  "2. Uncheck 'Email enumeration protection'.\n",
+                  "Google Auth is blocked. Manual Database check also failed (User not found or Wrong Password).\n\nPlease check your password.",
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DashboardPage(),
-                        ),
-                      );
-                    },
-                    child: const Text('FORCE LOGIN (DEV)'),
+                    child: const Text('OK'),
                   ),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -165,55 +190,17 @@ class _LoginPageState extends State<LoginPage> {
                       final Uri url = Uri.parse(
                         "https://console.firebase.google.com/project/billingsortware/authentication/settings",
                       );
-                      if (!await launchUrl(url)) {
+                      if (!await launchUrl(url))
                         debugPrint('Could not launch $url');
-                      }
                     },
-                    child: const Text('FIX AUTH NOW'),
+                    child: const Text('FIX AUTH SETTINGS'),
                   ),
                 ],
               ),
             );
-            return;
           }
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 15),
-              action: action,
-            ),
-          );
-        }
-      } catch (e) {
-        debugPrint("Generic Login Error: $e");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
-          );
         }
       } finally {
-        // AGGRESSIVE DEV BYPASS
-        // If login failed but user is a Test Admin, let them in anyway.
-        if (_emailController.text.trim() == 'admin@gmail.com' ||
-            _emailController.text.trim() == 'testing@gmail.com') {
-          if (mounted) {
-            // Only bypass if we are NOT already logged in (checked via stream usually, but here we force nav)
-            // This is a crude fix for the user request "fix it" and "why not login"
-            debugPrint("DEV BYPASS: Force logging in test account.");
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    const DashboardPage(uid: 'test_admin_uid'),
-              ),
-            );
-          }
-        }
-
         if (mounted) {
           setState(() {
             _isLoading = false;

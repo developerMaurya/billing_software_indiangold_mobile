@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'main.dart';
 
 class DashboardPage extends StatefulWidget {
   final String? uid;
@@ -66,7 +67,13 @@ class _DashboardPageState extends State<DashboardPage>
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
-    // main.dart StreamBuilder handles the rest
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
+    }
   }
 
   @override
