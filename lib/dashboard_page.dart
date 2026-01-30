@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'main.dart';
 import 'screens/customers/customer_list_screen.dart';
 import 'screens/products/product_list_screen.dart';
+import 'screens/sales/sales_screen.dart';
+import 'screens/profile_page.dart';
+import 'screens/sales/sales_history_page.dart';
+import 'screens/inventory_page.dart';
+import 'screens/reports_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String? uid;
@@ -107,7 +112,7 @@ class _DashboardPageState extends State<DashboardPage>
       _buildHomeView(),
       const CustomerListScreen(),
       const ProductListScreen(),
-      const Placeholder(child: Center(child: Text("Profile Coming Soon"))),
+      const SalesScreen(), // Changed from Placeholder
     ];
 
     return Scaffold(
@@ -148,9 +153,9 @@ class _DashboardPageState extends State<DashboardPage>
               label: 'Products',
             ),
             NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profile',
+              icon: Icon(Icons.sell_outlined),
+              selectedIcon: Icon(Icons.sell),
+              label: 'Sales',
             ),
           ],
         ),
@@ -189,20 +194,33 @@ class _DashboardPageState extends State<DashboardPage>
                   : null,
             ),
           ),
-          _drawerItem(Icons.dashboard, 'Dashboard', 0),
-          _drawerItem(Icons.people, 'Customers', 1),
-          _drawerItem(Icons.inventory_2, 'Products', 2),
+          _drawerItem(Icons.dashboard, 'Dashboard', () => _onItemTapped(0)),
+          _drawerItem(Icons.people, 'Customers', () => _onItemTapped(1)),
+          _drawerItem(Icons.inventory_2, 'Products', () => _onItemTapped(2)),
+          _drawerItem(Icons.sell, 'Sales', () => _onItemTapped(3)),
           const Divider(),
           _drawerItem(
-            Icons.sell,
-            'Sell / Purchase',
-            2,
-          ), // Maps to Products for now as placeholder
-          _drawerItem(Icons.history, 'History', 0), // Placeholder
-          _drawerItem(Icons.category, 'Inventory', 0), // Placeholder
+            Icons.history,
+            'History',
+            () => _navigateToPage(const SalesHistoryPage()),
+          ),
+          _drawerItem(
+            Icons.category,
+            'Inventory',
+            () => _navigateToPage(const InventoryPage()),
+          ),
           const Divider(),
-          _drawerItem(Icons.settings, 'Settings', 3), // Maps to Profile for now
-          _drawerItem(Icons.person, 'Profile', 3),
+          _drawerItem(Icons.settings, 'Settings', () => _showSettings()),
+          _drawerItem(
+            Icons.person,
+            'Profile',
+            () => _navigateToPage(const ProfilePage()),
+          ),
+          _drawerItem(
+            Icons.analytics,
+            'Reports',
+            () => _navigateToPage(const ReportsPage()),
+          ),
           const SizedBox(height: 20),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -214,32 +232,32 @@ class _DashboardPageState extends State<DashboardPage>
     );
   }
 
-  ListTile _drawerItem(IconData icon, String title, int index) {
+  ListTile _drawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: _selectedIndex == index
-            ? Colors.green.shade700
-            : Colors.grey.shade700,
-      ),
+      leading: Icon(icon, color: Colors.grey.shade700),
       title: Text(
         title,
-        style: TextStyle(
-          color: _selectedIndex == index
-              ? Colors.green.shade700
-              : Colors.black87,
-          fontWeight: _selectedIndex == index
-              ? FontWeight.bold
-              : FontWeight.normal,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.normal,
         ),
       ),
-      selected: _selectedIndex == index,
-      selectedTileColor: Colors.green.shade50,
       onTap: () {
         Navigator.pop(context); // Close drawer
-        _onItemTapped(index);
+        onTap();
       },
     );
+  }
+
+  void _navigateToPage(Widget page) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => page));
+  }
+
+  void _showSettings() {
+    // Placeholder for settings page
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Settings page coming soon!')));
   }
 
   Widget _buildHomeView() {

@@ -19,6 +19,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _hsnCodeController = TextEditingController();
+  final _batchNoController = TextEditingController();
   final _mrpController = TextEditingController();
   final _buyRateController = TextEditingController();
   final _givenRateController = TextEditingController();
@@ -43,6 +44,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  DateTime? _expireDate;
 
   final ProductService _productService = ProductService();
 
@@ -53,6 +55,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _nameController.text = widget.product!.name;
       _descriptionController.text = widget.product!.description;
       _hsnCodeController.text = widget.product!.hsnCode;
+      _batchNoController.text = widget.product!.batchNo ?? '';
       _mrpController.text = widget.product!.mrp.toString();
       _buyRateController.text = widget.product!.buyRate.toString();
       _givenRateController.text = widget.product!.givenRate.toString();
@@ -60,6 +63,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _categoryController.text = widget.product!.category;
       _productType = widget.product!.productType;
       _unitSizeController.text = widget.product!.unitSize ?? '';
+      _expireDate = widget.product!.expireDate;
     }
   }
 
@@ -68,6 +72,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _nameController.dispose();
     _descriptionController.dispose();
     _hsnCodeController.dispose();
+    _batchNoController.dispose();
     _mrpController.dispose();
     _buyRateController.dispose();
     _givenRateController.dispose();
@@ -78,13 +83,24 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   }
 
   Future<void> _pickImage() async {
-    final XFile? pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
-    );
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -97,6 +113,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           name: _nameController.text.trim(),
           description: _descriptionController.text.trim(),
           hsnCode: _hsnCodeController.text.trim(),
+          batchNo: _batchNoController.text.trim().isEmpty
+              ? null
+              : _batchNoController.text.trim(),
           mrp: double.tryParse(_mrpController.text.trim()) ?? 0.0,
           buyRate: double.tryParse(_buyRateController.text.trim()) ?? 0.0,
           givenRate: double.tryParse(_givenRateController.text.trim()) ?? 0.0,
@@ -107,6 +126,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ? null
               : _unitSizeController.text.trim(),
           imageUrl: widget.product?.imageUrl, // Keep existing if not changing
+          expireDate: _expireDate,
           createdAt: widget.product?.createdAt ?? DateTime.now(),
         );
 
@@ -216,46 +236,94 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
             children: [
               // Image Picker
               Center(
-                child: GestureDetector(
-                  onTap: _pickImage,
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade400),
-                      image: _imageFile != null
-                          ? DecorationImage(
-                              image: FileImage(_imageFile!),
-                              fit: BoxFit.cover,
-                            )
-                          : widget.product?.imageUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(widget.product!.imageUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color:
+                                    _imageFile != null ||
+                                        widget.product?.imageUrl != null
+                                    ? Colors.green.shade400
+                                    : Colors.grey.shade400,
+                                width: 2,
+                              ),
+                              image: _imageFile != null
+                                  ? DecorationImage(
+                                      image: FileImage(_imageFile!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : widget.product?.imageUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(
+                                        widget.product!.imageUrl!,
+                                      ),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child:
+                                _imageFile == null &&
+                                    widget.product?.imageUrl == null
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.add_a_photo,
+                                        size: 40,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        "Add Image",
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade600,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child:
-                        _imageFile == null && widget.product?.imageUrl == null
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_a_photo,
-                                size: 40,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Add Image",
-                                style: TextStyle(color: Colors.grey.shade600),
-                              ),
-                            ],
-                          )
-                        : null,
-                  ),
+                    if (_imageFile != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'New image selected',
+                          style: TextStyle(
+                            color: Colors.green.shade600,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -275,6 +343,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         decoration: _inputDecoration(
                           'Product Name',
                           Icons.shopping_bag,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                         validator: (v) =>
                             v!.isEmpty ? 'Name is required' : null,
@@ -307,6 +379,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: TextFormField(
+                              controller: _batchNoController,
+                              decoration: _inputDecoration(
+                                'Batch No',
+                                Icons.batch_prediction,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
                               controller: _categoryController,
                               decoration: _inputDecoration(
                                 'Category',
@@ -314,6 +400,35 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               ),
                               validator: (v) =>
                                   v!.isEmpty ? 'Category is required' : null,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () async {
+                                final pickedDate = await showDatePicker(
+                                  context: context,
+                                  initialDate: _expireDate ?? DateTime.now(),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime(2100),
+                                );
+                                if (pickedDate != null) {
+                                  setState(() => _expireDate = pickedDate);
+                                }
+                              },
+                              child: AbsorbPointer(
+                                child: TextFormField(
+                                  decoration: _inputDecoration(
+                                    'Expire Date',
+                                    Icons.calendar_today,
+                                  ),
+                                  controller: TextEditingController(
+                                    text: _expireDate != null
+                                        ? '${_expireDate!.day}/${_expireDate!.month}/${_expireDate!.year}'
+                                        : '',
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],

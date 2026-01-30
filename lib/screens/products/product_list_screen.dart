@@ -4,7 +4,9 @@ import '../../services/product_service.dart';
 import 'add_edit_product_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
-  const ProductListScreen({super.key});
+  final bool forSelection;
+
+  const ProductListScreen({super.key, this.forSelection = false});
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -18,9 +20,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
-          'Products',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          widget.forSelection ? 'Select Product' : 'Products',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Colors.green.shade700,
@@ -30,20 +32,22 @@ class _ProductListScreenState extends State<ProductListScreen> {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddEditProductScreen(),
+      floatingActionButton: widget.forSelection
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddEditProductScreen(),
+                  ),
+                );
+              },
+              label: const Text('Add Product'),
+              icon: const Icon(Icons.add),
+              backgroundColor: Colors.green.shade700,
+              foregroundColor: Colors.white,
             ),
-          );
-        },
-        label: const Text('Add Product'),
-        icon: const Icon(Icons.add),
-        backgroundColor: Colors.green.shade700,
-        foregroundColor: Colors.white,
-      ),
       body: StreamBuilder<List<ProductModel>>(
         stream: _productService.getProducts(),
         builder: (context, snapshot) {
@@ -95,12 +99,25 @@ class _ProductListScreenState extends State<ProductListScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddEditProductScreen(product: product),
-            ),
-          );
+          if (widget.forSelection) {
+            if (product.quantity <= 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Product is out of stock'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else {
+              _showQuantityDialog(product);
+            }
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddEditProductScreen(product: product),
+              ),
+            );
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -218,7 +235,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           ),
                         ),
                         Text(
-                          'Qty: ${product.quantity}',
+                          product.quantity > 0
+                              ? 'Qty: ${product.quantity}'
+                              : 'Out of Stock',
                           style: TextStyle(
                             fontSize: 14,
                             color: product.quantity > 0
@@ -241,6 +260,68 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showQuantityDialog(ProductModel product) {
+    final quantityController = TextEditingController(text: '1');
+    final priceController = TextEditingController(
+      text: product.givenRate.toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add ${product.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: quantityController,
+              decoration: const InputDecoration(labelText: 'Quantity'),
+              keyboardType: TextInputType.number,
+              validator: (v) => v!.isEmpty ? 'Required' : null,
+            ),
+            TextFormField(
+              controller: priceController,
+              decoration: const InputDecoration(labelText: 'Price'),
+              keyboardType: TextInputType.number,
+              validator: (v) => v!.isEmpty ? 'Required' : null,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final quantity = int.tryParse(quantityController.text) ?? 1;
+              final price =
+                  double.tryParse(priceController.text) ?? product.givenRate;
+              if (quantity > product.quantity) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Only ${product.quantity} items available in stock',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              Navigator.pop(context, {
+                'product': product,
+                'quantity': quantity,
+                'price': price,
+              });
+            },
+            child: const Text('Add'),
+          ),
+        ],
       ),
     );
   }

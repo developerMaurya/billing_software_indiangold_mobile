@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/customer_model.dart';
 import '../../services/customer_service.dart';
 
@@ -21,8 +23,32 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
   final _whatsappController = TextEditingController();
   String _status = 'Active';
   bool _isLoading = false;
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
 
   final CustomerService _customerService = CustomerService();
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -63,16 +89,17 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
           whatsapp: _whatsappController.text.trim(),
           status: _status,
           country: 'India', // Default
+          imageUrl: widget.customer?.imageUrl, // Keep existing if not changing
         );
 
         if (widget.customer == null) {
-          await _customerService.addCustomer(customer);
+          await _customerService.addCustomer(customer, _imageFile);
         } else {
-          await _customerService.updateCustomer(customer);
+          await _customerService.updateCustomer(customer, _imageFile);
         }
 
         if (mounted) {
-          Navigator.pop(context);
+          Navigator.pop(context, customer);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -121,7 +148,10 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
     if (confirm == true) {
       setState(() => _isLoading = true);
       try {
-        await _customerService.deleteCustomer(widget.customer!.id!);
+        await _customerService.deleteCustomer(
+          widget.customer!.id!,
+          widget.customer!.imageUrl,
+        );
         if (mounted) {
           Navigator.pop(context); // Pop AddEdit
           // Navigator.pop(context); // Pop List (Wait, no, we just modify the list or go back)
@@ -172,6 +202,100 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Image Picker
+              Center(
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color:
+                                    _imageFile != null ||
+                                        widget.customer?.imageUrl != null
+                                    ? Colors.green.shade400
+                                    : Colors.grey.shade400,
+                                width: 2,
+                              ),
+                              image: _imageFile != null
+                                  ? DecorationImage(
+                                      image: FileImage(_imageFile!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : widget.customer?.imageUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(
+                                        widget.customer!.imageUrl!,
+                                      ),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child:
+                                _imageFile == null &&
+                                    widget.customer?.imageUrl == null
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.person_add,
+                                        size: 32,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Add Photo",
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade600,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_imageFile != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'New photo selected',
+                          style: TextStyle(
+                            color: Colors.green.shade600,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
               _buildSectionTitle('Basic Information'),
               const SizedBox(height: 16),
               Card(

@@ -32,6 +32,7 @@ class ProductService {
         'name': product.name,
         'description': product.description,
         'hsnCode': product.hsnCode,
+        'batchNo': product.batchNo,
         'mrp': product.mrp,
         'buyRate': product.buyRate,
         'givenRate': product.givenRate,
@@ -40,6 +41,7 @@ class ProductService {
         'productType': product.productType,
         'unitSize': product.unitSize,
         'imageUrl': imageUrl,
+        'expireDate': product.expireDate?.millisecondsSinceEpoch,
         'shopId': _uid,
         'createdAt': DateTime.now().millisecondsSinceEpoch,
       });
@@ -77,6 +79,7 @@ class ProductService {
         'name': product.name,
         'description': product.description,
         'hsnCode': product.hsnCode,
+        'batchNo': product.batchNo,
         'mrp': product.mrp,
         'buyRate': product.buyRate,
         'givenRate': product.givenRate,
@@ -85,6 +88,7 @@ class ProductService {
         'productType': product.productType,
         'unitSize': product.unitSize,
         'imageUrl': imageUrl,
+        'expireDate': product.expireDate?.millisecondsSinceEpoch,
       });
     } catch (e) {
       debugPrint("Error updating product: $e");

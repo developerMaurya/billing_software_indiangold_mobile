@@ -3,6 +3,7 @@ class ProductModel {
   String name;
   String description;
   String hsnCode;
+  String? batchNo;
   double mrp;
   double buyRate;
   double givenRate;
@@ -11,6 +12,7 @@ class ProductModel {
   String? productType; // New: Bottle, Capsule, Syrup, etc.
   String? unitSize; // New: 100ml, 10 strips, etc.
   String? imageUrl;
+  DateTime? expireDate;
   DateTime? createdAt;
 
   ProductModel({
@@ -18,6 +20,7 @@ class ProductModel {
     required this.name,
     required this.description,
     required this.hsnCode,
+    this.batchNo,
     required this.mrp,
     required this.buyRate,
     required this.givenRate,
@@ -26,6 +29,7 @@ class ProductModel {
     this.productType,
     this.unitSize,
     this.imageUrl,
+    this.expireDate,
     this.createdAt,
   });
 
@@ -35,6 +39,7 @@ class ProductModel {
       'name': name,
       'description': description,
       'hsnCode': hsnCode,
+      'batchNo': batchNo,
       'mrp': mrp,
       'buyRate': buyRate,
       'givenRate': givenRate,
@@ -43,6 +48,7 @@ class ProductModel {
       'productType': productType,
       'unitSize': unitSize,
       'imageUrl': imageUrl,
+      'expireDate': expireDate?.millisecondsSinceEpoch,
       'createdAt': createdAt?.millisecondsSinceEpoch,
     };
   }
@@ -53,6 +59,7 @@ class ProductModel {
       name: map['name'] ?? '',
       description: map['description'] ?? '',
       hsnCode: map['hsnCode'] ?? '',
+      batchNo: map['batchNo'],
       mrp: (map['mrp'] ?? 0.0).toDouble(),
       buyRate: (map['buyRate'] ?? 0.0).toDouble(),
       givenRate: (map['givenRate'] ?? map['price'] ?? 0.0).toDouble(),
@@ -61,6 +68,9 @@ class ProductModel {
       productType: map['productType'],
       unitSize: map['unitSize'],
       imageUrl: map['imageUrl'],
+      expireDate: map['expireDate'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['expireDate'])
+          : null,
       createdAt: map['createdAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
           : null,
@@ -72,6 +82,7 @@ class ProductModel {
     String? name,
     String? description,
     String? hsnCode,
+    String? batchNo,
     double? mrp,
     double? buyRate,
     double? givenRate,
@@ -80,6 +91,7 @@ class ProductModel {
     String? productType,
     String? unitSize,
     String? imageUrl,
+    DateTime? expireDate,
     DateTime? createdAt,
   }) {
     return ProductModel(
@@ -87,6 +99,7 @@ class ProductModel {
       name: name ?? this.name,
       description: description ?? this.description,
       hsnCode: hsnCode ?? this.hsnCode,
+      batchNo: batchNo ?? this.batchNo,
       mrp: mrp ?? this.mrp,
       buyRate: buyRate ?? this.buyRate,
       givenRate: givenRate ?? this.givenRate,
@@ -95,6 +108,7 @@ class ProductModel {
       productType: productType ?? this.productType,
       unitSize: unitSize ?? this.unitSize,
       imageUrl: imageUrl ?? this.imageUrl,
+      expireDate: expireDate ?? this.expireDate,
       createdAt: createdAt ?? this.createdAt,
     );
   }
