@@ -21,6 +21,12 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
   final _emailController = TextEditingController();
   final _pinCodeController = TextEditingController();
   final _whatsappController = TextEditingController();
+
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _gstController = TextEditingController();
+  final _countryController = TextEditingController();
+
   String _status = 'Active';
   bool _isLoading = false;
   File? _imageFile;
@@ -60,7 +66,13 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
       _emailController.text = widget.customer!.email ?? '';
       _pinCodeController.text = widget.customer!.pinCode ?? '';
       _whatsappController.text = widget.customer!.whatsapp ?? '';
+      _cityController.text = widget.customer!.city ?? '';
+      _stateController.text = widget.customer!.state ?? '';
+      _gstController.text = widget.customer!.gstNumber ?? '';
+      _countryController.text = widget.customer!.country;
       _status = widget.customer!.status;
+    } else {
+      _countryController.text = 'India';
     }
   }
 
@@ -72,6 +84,10 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
     _emailController.dispose();
     _pinCodeController.dispose();
     _whatsappController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _gstController.dispose();
+    _countryController.dispose();
     super.dispose();
   }
 
@@ -87,8 +103,13 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
           email: _emailController.text.trim(),
           pinCode: _pinCodeController.text.trim(),
           whatsapp: _whatsappController.text.trim(),
+          gstNumber: _gstController.text.trim(),
+          city: _cityController.text.trim(),
+          state: _stateController.text.trim(),
           status: _status,
-          country: 'India', // Default
+          country: _countryController.text.trim().isEmpty
+              ? 'India'
+              : _countryController.text.trim(), // Default
           imageUrl: widget.customer?.imageUrl, // Keep existing if not changing
         );
 
@@ -339,6 +360,43 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _cityController,
+                      decoration: _inputDecoration('City', Icons.location_city),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _stateController,
+                      decoration: _inputDecoration('State', Icons.map),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _pinCodeController,
+                      decoration: _inputDecoration('Pin Code', Icons.pin_drop),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _countryController,
+                      decoration: _inputDecoration('Country', Icons.flag),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
               _buildSectionTitle('Optional Details'),
               const SizedBox(height: 16),
@@ -352,21 +410,20 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                   child: Column(
                     children: [
                       TextFormField(
+                        controller: _gstController,
+                        decoration: _inputDecoration(
+                          'GST Number',
+                          Icons.receipt,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
                         controller: _emailController,
                         decoration: _inputDecoration(
                           'Email Address',
                           Icons.email,
                         ),
                         keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _pinCodeController,
-                        decoration: _inputDecoration(
-                          'Pin Code',
-                          Icons.pin_drop,
-                        ),
-                        keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(

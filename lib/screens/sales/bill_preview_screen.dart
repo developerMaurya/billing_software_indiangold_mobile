@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../models/customer_model.dart';
 
 class BillPreviewScreen extends StatelessWidget {
@@ -92,7 +93,7 @@ class BillPreviewScreen extends StatelessWidget {
                       Text(
                         companyData?['name'] ?? 'Company Name',
                         style: const TextStyle(
-                          fontSize: 28,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.green,
                         ),
@@ -100,30 +101,27 @@ class BillPreviewScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        companyData?['address'] ?? '',
+                        '${companyData?['address'] ?? ''}, ${companyData?['city'] ?? ''}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
-                      if (companyData?['pinCode'] != null) ...[
-                        Text(
-                          'Pincode: ${companyData!['pinCode']}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
                       Text(
-                        'Phone: ${companyData?['mobile'] ?? ''} | GST: ${companyData?['gst'] ?? ''}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                        '${companyData?['state'] ?? ''} - ${companyData?['pinCode'] ?? ''}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Phone: ${companyData?['phone'] ?? ''} | GST: ${companyData?['gst'] ?? ''}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (companyData?['email'] != null)
+                        Text(
+                          'Email: ${companyData!['email']}',
+                          style: const TextStyle(fontSize: 12),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                      const Text(
-                        'State: Maharashtra | Country: India',
-                        style: TextStyle(fontSize: 14),
-                      ),
                     ],
                   ),
                 ),
@@ -136,60 +134,108 @@ class BillPreviewScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Bill No: Preview',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      'Date: ${DateTime.now().toString().split(' ')[0]}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      'Date: ${DateFormat('dd-MM-yyyy HH:mm').format(DateTime.now())}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
 
                 const SizedBox(height: 16),
 
-                // Customer Details
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Bill To:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.blue,
+                // Bill To & Ship To Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Bill To
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Bill To:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              customer.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text('${customer.address}, ${customer.city ?? ''}'),
+                            if (customer.state != null ||
+                                customer.pinCode != null)
+                              Text(
+                                '${customer.state ?? ''} - ${customer.pinCode ?? ''}',
+                              ),
+                            Text('Mobile: ${customer.mobile}'),
+                            if (customer.gstNumber != null &&
+                                customer.gstNumber!.isNotEmpty)
+                              Text(
+                                'GSTIN: ${customer.gstNumber}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Name: ${customer.name}',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(width: 12),
+                    // Ship To (Same as Bill To for now)
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Ship To:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              customer.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text('${customer.address}, ${customer.city ?? ''}'),
+                            if (customer.state != null ||
+                                customer.pinCode != null)
+                              Text(
+                                '${customer.state ?? ''} - ${customer.pinCode ?? ''}',
+                              ),
+                            Text('Mobile: ${customer.mobile}'),
+                          ],
+                        ),
                       ),
-                      Text(
-                        'Mobile: ${customer.mobile} | WhatsApp: ${customer.whatsapp ?? customer.mobile}',
-                      ),
-                      Text('Address: ${customer.address}'),
-                      if (customer.pinCode != null) ...[
-                        Text('Pincode: ${customer.pinCode}'),
-                      ],
-                      Text(
-                        'Status: ${customer.status} | Country: ${customer.country}',
-                      ),
-                      if (customer.email != null) ...[
-                        Text('Email: ${customer.email}'),
-                      ],
-                      const Text(
-                        'GST No: Not Applicable',
-                        style: TextStyle(fontStyle: FontStyle.italic),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
@@ -396,153 +442,46 @@ class BillPreviewScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.shade300),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'राशि देय / Amount Payable',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '₹${totalAmount.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                              ),
-                            ),
-                            const Text(
-                              'कुल भुगतान राशि / Total Paid Amount: ₹0.00',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      const SizedBox(height: 8),
                     ],
                   ),
-                ),
+                ), // End of Green Totals Container
 
                 const SizedBox(height: 32),
 
                 // Authorization/Signature
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
+                // Authorization/Signature
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Text(
-                        'Authorization / प्राधिकरण',
-                        style: TextStyle(
-                          fontSize: 16,
+                      Text(
+                        'For ${companyData?['name'] ?? 'Company Name'}',
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.right,
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Customer Signature',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 40),
-                                Container(height: 1, color: Colors.black),
-                                const Text(
-                                  'हस्ताक्षर',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Authorized Signatory',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  companyData?['name'] ?? 'Company Name',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 20),
-                                Container(height: 1, color: Colors.black),
-                                const Text(
-                                  'हस्ताक्षर',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 40),
+                      Container(height: 1, width: 200, color: Colors.black),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Authorized Signatory',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 32),
-
-                // Footer
                 Center(
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Thank you for your business!',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Generated on ${DateTime.now().toString().split(' ')[0]}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+                  child: Container(
+                    height: 2,
+                    width: 100,
+                    color: Colors.grey.shade300,
                   ),
                 ),
               ],

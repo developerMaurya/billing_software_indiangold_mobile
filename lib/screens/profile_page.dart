@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final String? uid;
+  const ProfilePage({super.key, this.uid});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -65,64 +66,83 @@ class _ProfilePageState extends State<ProfilePage> {
       debugPrint('ProfilePage: Loading profile data...');
       final user = FirebaseAuth.instance.currentUser;
       debugPrint('ProfilePage: Current user: $user');
+
+      // Pre-fill from Auth
       if (user != null) {
-        debugPrint('ProfilePage: User UID: ${user.uid}');
+        if (_emailController.text.isEmpty)
+          _emailController.text = user.email ?? '';
+        if (_phoneController.text.isEmpty)
+          _phoneController.text = user.phoneNumber ?? '';
+      }
+
+      final targetUid = widget.uid ?? user?.uid;
+      debugPrint('ProfilePage: Target UID: $targetUid');
+
+      if (targetUid != null) {
         final doc = await FirebaseFirestore.instance
             .collection('shops')
-            .doc(user.uid)
+            .doc(targetUid)
             .get();
 
         debugPrint('ProfilePage: Document exists: ${doc.exists}');
         if (doc.exists) {
           final data = doc.data()!;
-          debugPrint('ProfilePage: Document data: $data');
+          debugPrint('ProfilePage: Document data keys: ${data.keys.toList()}');
+          debugPrint('ProfilePage: Full Data: $data');
           setState(() {
             _companyData = data;
-            _nameController.text = data['name'] ?? '';
-            _emailController.text = data['email'] ?? '';
-            _phoneController.text = data['phone'] ?? '';
-            _addressController.text = data['address'] ?? '';
-            _gstController.text = data['gst'] ?? '';
-            _panController.text = data['pan'] ?? '';
+            _nameController.text = (data['name'] ?? '').toString();
+            _emailController.text =
+                (data['email']?.toString().isNotEmpty == true)
+                ? data['email']
+                : (user?.email ?? '');
+            _phoneController.text =
+                (data['phone']?.toString().isNotEmpty == true)
+                ? data['phone']
+                : (user?.phoneNumber ?? '');
+            _addressController.text = (data['address'] ?? '').toString();
+            _permanentAddressController.text = (data['permanentAddress'] ?? '')
+                .toString();
+            _cityController.text = (data['city'] ?? '').toString();
+            _stateController.text = (data['state'] ?? '').toString();
+            _pinCodeController.text = (data['pinCode'] ?? '').toString();
+            _gstController.text = (data['gst'] ?? '').toString();
+            _panController.text = (data['pan'] ?? '').toString();
+            _licenseController.text = (data['license'] ?? '').toString();
+            _statusController.text = (data['status'] ?? 'Active').toString();
+            _countryController.text = (data['country'] ?? 'India').toString();
             _logoUrl = data['logo'];
           });
           debugPrint('ProfilePage: Data loaded successfully');
         } else {
-          debugPrint('ProfilePage: Document does not exist');
+          debugPrint('ProfilePage: Document does not exist - setting defaults');
+          // Set default values for new profile but keep auth data
+          setState(() {
+            _statusController.text = 'Active';
+            _countryController.text = 'India';
+            if (user != null) {
+              _emailController.text = user.email ?? '';
+              _phoneController.text = user.phoneNumber ?? '';
+            }
+          });
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
-                  'No profile data found. Please set up your profile.',
+                  'Profile not found. Creating new profile from login details.',
                 ),
-                backgroundColor: Colors.orange,
+                backgroundColor: Colors.blue,
               ),
             );
           }
         }
-      } else {
-        debugPrint('ProfilePage: No user logged in');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please log in to view profile.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
       }
     } catch (e) {
       debugPrint('ProfilePage: Error loading profile: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading profile: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -153,12 +173,17 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return null;
+      final targetUid = widget.uid ?? user?.uid;
+
+      if (targetUid == null) {
+        debugPrint('Error: No User ID found for logo upload');
+        return null;
+      }
 
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('company_logos')
-          .child('${user.uid}.jpg');
+          .child('${targetUid}.jpg');
 
       await storageRef.putFile(_logoFile!);
       return await storageRef.getDownloadURL();
@@ -174,7 +199,18 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() => _isLoading = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      final targetUid = widget.uid ?? user?.uid;
+
+      if (targetUid == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error: No valid User ID found to save data.'),
+            ),
+          );
+        }
+        return;
+      }
 
       final logoUrl = await _uploadLogo();
 
@@ -183,16 +219,27 @@ class _ProfilePageState extends State<ProfilePage> {
         'email': _emailController.text.trim(),
         'phone': _phoneController.text.trim(),
         'address': _addressController.text.trim(),
+        'permanentAddress': _permanentAddressController.text.trim(),
+        'city': _cityController.text.trim(),
+        'state': _stateController.text.trim(),
+        'pinCode': _pinCodeController.text.trim(),
         'gst': _gstController.text.trim(),
         'pan': _panController.text.trim(),
-        'logo': logoUrl,
+        'license': _licenseController.text.trim(),
+        'status': _statusController.text.trim(),
+        'country': _countryController.text.trim(),
+        'logo': logoUrl ?? _logoUrl, // Keep existing if upload failed/skipped
         'updatedAt': DateTime.now(),
       };
 
       await FirebaseFirestore.instance
           .collection('shops')
-          .doc(user.uid)
-          .update(updatedData);
+          .doc(targetUid)
+          .set(updatedData, SetOptions(merge: true));
+
+      setState(() {
+        _logoUrl = logoUrl;
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -201,7 +248,6 @@ class _ProfilePageState extends State<ProfilePage> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -223,7 +269,7 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text(
-          'Profile',
+          'My Profile',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -252,6 +298,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         decoration: BoxDecoration(
                           color: Colors.grey.shade200,
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.green.shade700,
+                            width: 2,
+                          ),
                           image: _logoFile != null
                               ? DecorationImage(
                                   image: FileImage(_logoFile!),
@@ -266,100 +316,30 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         child: _logoFile == null && _logoUrl == null
                             ? Icon(
-                                Icons.camera_alt,
-                                size: 40,
-                                color: Colors.grey.shade600,
+                                Icons.person,
+                                size: 60,
+                                color: Colors.grey.shade400,
                               )
                             : null,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tap to change logo',
+                      'Tap to change photo',
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 14,
                       ),
                     ),
+                    const SizedBox(height: 24),
+
+                    // Information Section
+                    // Information Section
+                    _buildEditForm(),
 
                     const SizedBox(height: 24),
 
-                    // Form Fields
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              controller: _nameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Company Name *',
-                                prefixIcon: Icon(Icons.business),
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (v) => v!.isEmpty
-                                  ? 'Company name is required'
-                                  : null,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _emailController,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: Icon(Icons.email),
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _phoneController,
-                              decoration: const InputDecoration(
-                                labelText: 'Phone',
-                                prefixIcon: Icon(Icons.phone),
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.phone,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _addressController,
-                              decoration: const InputDecoration(
-                                labelText: 'Address',
-                                prefixIcon: Icon(Icons.location_on),
-                                border: OutlineInputBorder(),
-                              ),
-                              maxLines: 3,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _gstController,
-                              decoration: const InputDecoration(
-                                labelText: 'GST Number',
-                                prefixIcon: Icon(Icons.receipt),
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _panController,
-                              decoration: const InputDecoration(
-                                labelText: 'PAN Number',
-                                prefixIcon: Icon(Icons.credit_card),
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
+                    // Save Button (only in edit mode)
                     // Save Button
                     SizedBox(
                       width: double.infinity,
@@ -386,6 +366,139 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildEditForm() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Company Name *',
+                prefixIcon: Icon(Icons.business),
+                border: OutlineInputBorder(),
+              ),
+              validator: (v) => v!.isEmpty ? 'Company name is required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                prefixIcon: Icon(Icons.email),
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Phone',
+                prefixIcon: Icon(Icons.phone),
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _addressController,
+              decoration: const InputDecoration(
+                labelText: 'Address',
+                prefixIcon: Icon(Icons.location_on),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _cityController,
+                    decoration: const InputDecoration(
+                      labelText: 'City',
+                      prefixIcon: Icon(Icons.location_city),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextFormField(
+                    controller: _stateController,
+                    decoration: const InputDecoration(
+                      labelText: 'State',
+                      prefixIcon: Icon(Icons.map),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _pinCodeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Pin Code',
+                      prefixIcon: Icon(Icons.pin_drop),
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextFormField(
+                    controller: _countryController,
+                    decoration: const InputDecoration(
+                      labelText: 'Country',
+                      prefixIcon: Icon(Icons.flag),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _licenseController,
+              decoration: const InputDecoration(
+                labelText: 'License Number',
+                prefixIcon: Icon(Icons.card_membership),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _gstController,
+              decoration: const InputDecoration(
+                labelText: 'GST Number',
+                prefixIcon: Icon(Icons.receipt),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _panController,
+              decoration: const InputDecoration(
+                labelText: 'PAN Number',
+                prefixIcon: Icon(Icons.credit_card),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
