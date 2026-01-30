@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'main.dart';
+import 'screens/customers/customer_list_screen.dart';
+import 'screens/products/product_list_screen.dart';
 
 class DashboardPage extends StatefulWidget {
   final String? uid;
@@ -18,6 +20,8 @@ class _DashboardPageState extends State<DashboardPage>
   bool isLoading = true;
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -76,6 +80,12 @@ class _DashboardPageState extends State<DashboardPage>
     }
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -93,59 +103,196 @@ class _DashboardPageState extends State<DashboardPage>
       );
     }
 
+    final List<Widget> _pages = [
+      _buildHomeView(),
+      const CustomerListScreen(),
+      const ProductListScreen(),
+      const Placeholder(child: Center(child: Text("Profile Coming Soon"))),
+    ];
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(),
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (companyData != null) ...[
-                      _buildWelcomeSection(),
-                      const SizedBox(height: 25),
-                      _buildBanners(),
-                      const SizedBox(height: 25),
-                      _buildCompanyInfoCard(),
-                      const SizedBox(height: 25),
-                      const Text(
-                        "Quick Actions",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      _buildActionGrid(),
-                    ] else
-                      Center(
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.warning_amber_rounded,
-                              size: 60,
-                              color: Colors.orange,
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              "No Shop details found. Please register properly.",
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+      // Only show the inner AppBar (from Sliver or CustomerList)
+      // Checks for index to determine if we need a safe area wrapping or not
+      body: _pages[_selectedIndex],
+      drawer: _buildDrawer(),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          backgroundColor: Colors.white,
+          indicatorColor: Colors.green.shade100,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outlined),
+              selectedIcon: Icon(Icons.people),
+              label: 'Customers',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.inventory_2_outlined),
+              selectedIcon: Icon(Icons.inventory_2),
+              label: 'Products',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.green.shade800, Colors.green.shade600],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
+            accountName: Text(
+              companyData?['name'] ?? 'Admin',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            accountEmail: Text(
+              companyData?['email'] ?? 'admin@indiangold.com',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              backgroundImage: companyData?['logo'] != null
+                  ? NetworkImage(companyData!['logo'])
+                  : null,
+              child: companyData?['logo'] == null
+                  ? Icon(Icons.store, size: 40, color: Colors.green.shade800)
+                  : null,
+            ),
+          ),
+          _drawerItem(Icons.dashboard, 'Dashboard', 0),
+          _drawerItem(Icons.people, 'Customers', 1),
+          _drawerItem(Icons.inventory_2, 'Products', 2),
+          const Divider(),
+          _drawerItem(
+            Icons.sell,
+            'Sell / Purchase',
+            2,
+          ), // Maps to Products for now as placeholder
+          _drawerItem(Icons.history, 'History', 0), // Placeholder
+          _drawerItem(Icons.category, 'Inventory', 0), // Placeholder
+          const Divider(),
+          _drawerItem(Icons.settings, 'Settings', 3), // Maps to Profile for now
+          _drawerItem(Icons.person, 'Profile', 3),
+          const SizedBox(height: 20),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            onTap: _logout,
           ),
         ],
       ),
+    );
+  }
+
+  ListTile _drawerItem(IconData icon, String title, int index) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: _selectedIndex == index
+            ? Colors.green.shade700
+            : Colors.grey.shade700,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: _selectedIndex == index
+              ? Colors.green.shade700
+              : Colors.black87,
+          fontWeight: _selectedIndex == index
+              ? FontWeight.bold
+              : FontWeight.normal,
+        ),
+      ),
+      selected: _selectedIndex == index,
+      selectedTileColor: Colors.green.shade50,
+      onTap: () {
+        Navigator.pop(context); // Close drawer
+        _onItemTapped(index);
+      },
+    );
+  }
+
+  Widget _buildHomeView() {
+    return CustomScrollView(
+      slivers: [
+        _buildSliverAppBar(),
+        SliverToBoxAdapter(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (companyData != null) ...[
+                    _buildWelcomeSection(),
+                    const SizedBox(height: 25),
+                    _buildBanners(),
+                    const SizedBox(height: 25),
+                    _buildCompanyInfoCard(),
+                    const SizedBox(height: 25),
+                    const Text(
+                      "Quick Actions",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    _buildActionGrid(),
+                  ] else
+                    Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            size: 60,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            "No Shop details found. Please register properly.",
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -172,9 +319,8 @@ class _DashboardPageState extends State<DashboardPage>
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.logout_rounded, color: Colors.white),
-          onPressed: _logout,
-          tooltip: 'Logout',
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+          onPressed: () {}, // Notification placeholder
         ),
       ],
     );
@@ -295,6 +441,7 @@ class _DashboardPageState extends State<DashboardPage>
           decoration: BoxDecoration(
             color: Colors.green.shade50,
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.green.shade100),
           ),
           child: Icon(icon, color: Colors.green.shade700, size: 20),
         ),
@@ -371,7 +518,11 @@ class _DashboardPageState extends State<DashboardPage>
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: () {
-            // Placeholder for action
+            if (label == 'Patients') {
+              // Reusing Patients as Customers for this context if needed
+              _onItemTapped(1); // Switch to Customer tab
+              return;
+            }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("$label Feature Coming Soon!")),
             );
