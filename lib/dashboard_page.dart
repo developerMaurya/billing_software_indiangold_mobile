@@ -258,7 +258,10 @@ class _DashboardPageState extends State<DashboardPage>
       _buildHomeView(),
       const CustomerListScreen(),
       const ProductListScreen(),
-      const SalesScreen(), // Changed from Placeholder
+      SalesScreen(
+        uid: currentUid,
+        companyData: companyData,
+      ), // Changed from Placeholder
     ];
 
     return Scaffold(

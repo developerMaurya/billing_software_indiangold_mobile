@@ -11,7 +11,9 @@ import 'discount_tax_screen.dart';
 import 'product_selection_screen.dart';
 
 class SalesScreen extends StatefulWidget {
-  const SalesScreen({super.key});
+  final String? uid;
+  final Map<String, dynamic>? companyData;
+  const SalesScreen({super.key, this.uid, this.companyData});
 
   @override
   State<SalesScreen> createState() => _SalesScreenState();
@@ -35,30 +37,53 @@ class _SalesScreenState extends State<SalesScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchCompanyData();
+    if (widget.companyData != null) {
+      _companyData = widget.companyData;
+    } else {
+      _fetchCompanyData();
+    }
+  }
+
+  @override
+  void didUpdateWidget(SalesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.companyData != oldWidget.companyData &&
+        widget.companyData != null) {
+      setState(() {
+        _companyData = widget.companyData;
+      });
+    }
   }
 
   Future<void> _fetchCompanyData() async {
     try {
       debugPrint('Fetching company data...');
-      final user = FirebaseAuth.instance.currentUser;
-      debugPrint('Current user: $user');
-      if (user != null) {
-        debugPrint('User UID: ${user.uid}');
+      String? targetUid = widget.uid;
+
+      if (targetUid == null) {
+        final user = FirebaseAuth.instance.currentUser;
+        targetUid = user?.uid;
+      }
+
+      debugPrint('Target UID for Company Data: $targetUid');
+
+      if (targetUid != null) {
         final doc = await FirebaseFirestore.instance
             .collection('shops')
-            .doc(user.uid)
+            .doc(targetUid)
             .get();
         debugPrint('Document exists: ${doc.exists}');
         if (doc.exists) {
           debugPrint('Document data: ${doc.data()}');
-          setState(() => _companyData = doc.data());
+          if (mounted) {
+            setState(() => _companyData = doc.data());
+          }
           debugPrint('Company data set successfully');
         } else {
           debugPrint('Document does not exist in shops collection');
         }
       } else {
-        debugPrint('No user logged in');
+        debugPrint('No valid UID found for Company Data');
       }
     } catch (e) {
       debugPrint('Error fetching company data: $e');
