@@ -231,6 +231,15 @@ class BillPreviewScreen extends StatelessWidget {
                                 '${customer.state ?? ''} - ${customer.pinCode ?? ''}',
                               ),
                             Text('Mobile: ${customer.mobile}'),
+                            if (customer.gstNumber != null &&
+                                customer.gstNumber!.isNotEmpty)
+                              Text(
+                                'GSTIN: ${customer.gstNumber}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -341,7 +350,6 @@ class BillPreviewScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.green.shade200),
                   ),
@@ -398,7 +406,7 @@ class BillPreviewScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'IGST (${gstPercent}% ${isInclusiveGst ? 'Inclusive' : 'Exclusive'}):',
+                            'Total GST (${gstPercent}%):',
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                           Text(
@@ -411,12 +419,26 @@ class BillPreviewScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'UGST (2.5% Sharing):',
-                            style: TextStyle(fontWeight: FontWeight.w500),
+                          Text(
+                            'IGST / SGST (${(gstPercent / 2).toStringAsFixed(1)}%):',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                           Text(
-                            '₹${(gstAmount * 0.025).toStringAsFixed(2)}',
+                            '₹${(gstAmount / 2).toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'CGST (${(gstPercent / 2).toStringAsFixed(1)}%):',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            '₹${(gstAmount / 2).toStringAsFixed(2)}',
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                         ],
@@ -458,7 +480,7 @@ class BillPreviewScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        'For ${companyData?['name'] ?? 'Company Name'}',
+                        companyData?['name'] ?? 'Company Name',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,

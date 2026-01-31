@@ -3,7 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/sale_model.dart';
+
+import '../../models/customer_model.dart';
 import '../../services/sale_service.dart';
+import '../../services/pdf_service.dart';
+import 'package:printing/printing.dart';
+import 'package:pdf/pdf.dart';
 
 class SalesHistoryPage extends StatefulWidget {
   const SalesHistoryPage({super.key});
@@ -446,6 +451,75 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
               ),
 
               const Divider(),
+              // Subtotal
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Subtotal:'),
+                  Text('₹${sale.subtotal.toStringAsFixed(2)}'),
+                ],
+              ),
+              if (sale.discountPercent > 0)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Discount (${sale.discountPercent}%):',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    Text(
+                      '-₹${(sale.subtotal * sale.discountPercent / 100).toStringAsFixed(2)}',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Taxable Amount:'),
+                  Text(
+                    '₹${(sale.subtotal - (sale.subtotal * sale.discountPercent / 100)).toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // GST Breakdown
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Total GST (${sale.gstPercent}%):'),
+                  Text('₹${sale.gstAmount.toStringAsFixed(2)}'),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'IGST / SGST (${(sale.gstPercent / 2).toStringAsFixed(1)}%):',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Text(
+                    '₹${(sale.gstAmount / 2).toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'CGST (${(sale.gstPercent / 2).toStringAsFixed(1)}%):',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Text(
+                    '₹${(sale.gstAmount / 2).toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const Divider(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -470,8 +544,97 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
           ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              _viewPdf(sale);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade700,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('View PDF'),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _viewPdf(SaleModel sale) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // 1. Fetch Company Data
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not logged in');
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final companyData = userDoc.data();
+
+      // 2. Fetch Customer Data
+      // Note: If customer is deleted, we might need a fallback.
+      // Ideally sale should snapshot customer details but current model relies on fetching or basic fields.
+      CustomerModel customer;
+      if (sale.customerId.isNotEmpty) {
+        final customerDoc = await FirebaseFirestore.instance
+            .collection('customers')
+            .doc(sale.customerId)
+            .get();
+        if (customerDoc.exists) {
+          customer = CustomerModel.fromMap(
+            customerDoc.data()!,
+            sale.customerId,
+          );
+        } else {
+          // Fallback if customer not found in DB
+          customer = CustomerModel(
+            id: sale.customerId,
+            name: sale.customerName,
+            mobile: sale.customerMobile,
+            address: '',
+          );
+        }
+      } else {
+        customer = CustomerModel(
+          id: '',
+          name: sale.customerName,
+          mobile: sale.customerMobile,
+          address: '',
+        );
+      }
+
+      // 3. Generate PDF
+      final pdfService = PdfService();
+      final pdf = await pdfService.generateBillPdf(
+        sale: sale,
+        customer: customer,
+        companyData: companyData,
+      );
+
+      // Close loading indicator
+      if (mounted) Navigator.pop(context);
+
+      // 4. Show PDF
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+      );
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading if open
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
