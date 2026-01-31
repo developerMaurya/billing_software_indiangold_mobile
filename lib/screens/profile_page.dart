@@ -146,11 +146,54 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _showImagePickerOptions() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageSource(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageSource(ImageSource.gallery);
+                },
+              ),
+              if (_logoFile != null || _logoUrl != null)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Remove Photo',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeImage();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImageSource(ImageSource source) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-      );
+      final XFile? pickedFile = await _picker.pickImage(source: source);
       if (pickedFile != null) {
         setState(() {
           _logoFile = File(pickedFile.path);
@@ -168,6 +211,13 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _removeImage() {
+    setState(() {
+      _logoFile = null;
+      _logoUrl = null;
+    });
+  }
+
   Future<String?> _uploadLogo() async {
     if (_logoFile == null) return _logoUrl;
 
@@ -180,13 +230,14 @@ class _ProfilePageState extends State<ProfilePage> {
         return null;
       }
 
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('company_logos')
-          .child('${targetUid}.jpg');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final storageRef = FirebaseStorage.instance.ref().child(
+        'users/$targetUid/logo_$timestamp.jpg',
+      );
 
       await storageRef.putFile(_logoFile!);
-      return await storageRef.getDownloadURL();
+      final downloadUrl = await storageRef.getDownloadURL();
+      return downloadUrl;
     } catch (e) {
       debugPrint('Error uploading logo: $e');
       return null;
@@ -291,36 +342,56 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     // Logo Section
                     GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.green.shade700,
-                            width: 2,
+                      onTap: _showImagePickerOptions,
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.green.shade700,
+                                width: 2,
+                              ),
+                              image: _logoFile != null
+                                  ? DecorationImage(
+                                      image: FileImage(_logoFile!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : _logoUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(_logoUrl!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: _logoFile == null && _logoUrl == null
+                                ? Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: Colors.grey.shade400,
+                                  )
+                                : null,
                           ),
-                          image: _logoFile != null
-                              ? DecorationImage(
-                                  image: FileImage(_logoFile!),
-                                  fit: BoxFit.cover,
-                                )
-                              : _logoUrl != null
-                              ? DecorationImage(
-                                  image: NetworkImage(_logoUrl!),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                        ),
-                        child: _logoFile == null && _logoUrl == null
-                            ? Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.grey.shade400,
-                              )
-                            : null,
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade700,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 8),

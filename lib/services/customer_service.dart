@@ -4,12 +4,16 @@ import 'package:firebase_storage/firebase_storage.dart';
 import '../models/customer_model.dart';
 import 'package:flutter/material.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+
 class CustomerService {
   final CollectionReference _customersCollection = FirebaseFirestore.instance
       .collection('customers');
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final String _uid;
 
-  // Create
+  CustomerService() : _uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
   Future<void> addCustomer(CustomerModel customer, File? imageFile) async {
     try {
       String? imageUrl;
@@ -107,8 +111,10 @@ class CustomerService {
   // Helper: Upload Image
   Future<String> _uploadImage(File file) async {
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference ref = _storage.ref().child('customer_images/$fileName');
+      if (_uid.isEmpty) throw Exception('User not logged in');
+      String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      String fileName = 'cust_$timestamp.jpg';
+      Reference ref = _storage.ref().child('users/$_uid/customers/$fileName');
       UploadTask uploadTask = ref.putFile(file);
       TaskSnapshot snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();

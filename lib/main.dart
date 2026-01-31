@@ -10,6 +10,7 @@ import 'dashboard_page.dart';
 import 'registration_page.dart';
 
 void main() async {
+  print("🔥🔥🔥 APP STARTING... SEARCH FOR 'Indian Gold Billing' 🔥🔥🔥");
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(const MyApp());

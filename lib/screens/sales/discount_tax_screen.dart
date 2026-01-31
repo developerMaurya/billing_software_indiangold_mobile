@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../models/customer_model.dart';
-import 'bill_generation_screen.dart';
 import 'bill_preview_screen.dart';
 
 class DiscountTaxScreen extends StatefulWidget {
@@ -336,50 +335,20 @@ class _DiscountTaxScreenState extends State<DiscountTaxScreen> {
     );
   }
 
-  void _generateBill() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Generate Bill'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Total Amount: ₹${totalAmount.toStringAsFixed(2)}'),
-            const SizedBox(height: 8),
-            const Text('This will save the sale and generate a PDF bill.'),
-            const SizedBox(height: 8),
-            const Text('Product quantities will be reduced from inventory.'),
-          ],
+  void _generateBill() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BillPreviewScreen(
+          customer: widget.customer,
+          selectedProducts: widget.selectedProducts,
+          companyData: widget.companyData,
+          discountPercent: discountPercent,
+          gstPercent: gstPercent,
+          isInclusiveGst: isInclusiveGst,
+          autoGenerate: true,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Generate'),
-          ),
-        ],
       ),
     );
-
-    if (confirm == true) {
-      // Navigate to bill generation screen with all the calculated values
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => BillGenerationScreen(
-            customer: widget.customer,
-            selectedProducts: widget.selectedProducts,
-            companyData: widget.companyData,
-            discountPercent: discountPercent,
-            gstPercent: gstPercent,
-            isInclusiveGst: isInclusiveGst,
-          ),
-        ),
-      );
-    }
   }
 }

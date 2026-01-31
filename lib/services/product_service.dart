@@ -116,8 +116,10 @@ class ProductService {
   // Helper: Upload Image
   Future<String> _uploadImage(File file) async {
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference ref = _storage.ref().child('product_images/$fileName');
+      if (_uid.isEmpty) throw Exception('User not logged in');
+      String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      String fileName = 'prod_$timestamp.jpg';
+      Reference ref = _storage.ref().child('users/$_uid/products/$fileName');
       UploadTask uploadTask = ref.putFile(file);
       TaskSnapshot snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();

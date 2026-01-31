@@ -71,125 +71,261 @@ class _BillGenerationScreenState extends State<BillGenerationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Company Details
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.companyData?['name'] ?? 'Company Name',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.companyData?['address'] ?? '',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    if (widget.companyData?['pinCode'] != null) ...[
-                      Text('Pincode: ${widget.companyData!['pinCode']}'),
-                    ],
-                    Text(
-                      'Phone: ${widget.companyData?['mobile'] ?? ''} | GST: ${widget.companyData?['gst'] ?? ''}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    const Text('State: Maharashtra | Country: India'),
-                  ],
-                ),
+            // Company Header (Matched with Preview)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.shade200),
               ),
+              child: Column(
+                children: [
+                  Text(
+                    widget.companyData?['name'] ?? 'Company Name',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${widget.companyData?['address'] ?? ''}, ${widget.companyData?['city'] ?? ''}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    '${widget.companyData?['state'] ?? ''} - ${widget.companyData?['pinCode'] ?? ''}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Phone: ${widget.companyData?['mobile'] ?? ''} | GST: ${widget.companyData?['gst'] ?? ''}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 32),
+
+            // Date Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Bill No: New',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Date: ${DateTime.now().toString().split(' ')[0]}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
 
             const SizedBox(height: 16),
 
-            // Customer Details
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Bill To / ग्राहक विवरण',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
+            // Bill To & Ship To Row (Matched with Preview)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Bill To
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade200),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Name: ${widget.customer.name}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    Text(
-                      'Mobile: ${widget.customer.mobile} | WhatsApp: ${widget.customer.whatsapp ?? widget.customer.mobile}',
-                    ),
-                    Text('Address: ${widget.customer.address}'),
-                    if (widget.customer.pinCode != null) ...[
-                      Text('Pincode: ${widget.customer.pinCode}'),
-                    ],
-                    Text(
-                      'Status: ${widget.customer.status} | Country: ${widget.customer.country}',
-                    ),
-                    if (widget.customer.email != null) ...[
-                      Text('Email: ${widget.customer.email}'),
-                    ],
-                    const Text(
-                      'GST No: Not Applicable',
-                      style: TextStyle(fontStyle: FontStyle.italic),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Products
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Products',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...widget.selectedProducts.map((item) {
-                      final product = item['product'] as dynamic;
-                      final quantity = item['quantity'] as int;
-                      final price = item['price'] as double;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Expanded(child: Text(product.name)),
-                            Text('HSN: ${product.hsnCode}'),
-                            const SizedBox(width: 8),
-                            Text('Qty: $quantity'),
-                            const SizedBox(width: 8),
-                            Text('₹${price.toStringAsFixed(2)}'),
-                            const SizedBox(width: 8),
-                            Text('₹${(quantity * price).toStringAsFixed(2)}'),
-                          ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Bill To:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.blue,
+                          ),
                         ),
-                      );
-                    }),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.customer.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${widget.customer.address}, ${widget.customer.city ?? ''}',
+                        ),
+                        if (widget.customer.state != null ||
+                            widget.customer.pinCode != null)
+                          Text(
+                            '${widget.customer.state ?? ''} - ${widget.customer.pinCode ?? ''}',
+                          ),
+                        Text('Mobile: ${widget.customer.mobile}'),
+                        if (widget.customer.gstNumber != null &&
+                            widget.customer.gstNumber!.isNotEmpty)
+                          Text(
+                            'GSTIN: ${widget.customer.gstNumber}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Ship To
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ship To:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.customer.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${widget.customer.address}, ${widget.customer.city ?? ''}',
+                        ),
+                        if (widget.customer.state != null ||
+                            widget.customer.pinCode != null)
+                          Text(
+                            '${widget.customer.state ?? ''} - ${widget.customer.pinCode ?? ''}',
+                          ),
+                        Text('Mobile: ${widget.customer.mobile}'),
+                        if (widget.customer.gstNumber != null &&
+                            widget.customer.gstNumber!.isNotEmpty)
+                          Text(
+                            'GSTIN: ${widget.customer.gstNumber}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Products Table (Matched with Preview)
+            const Text(
+              'Items:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Table(
+              border: TableBorder.all(color: Colors.grey.shade300),
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: Colors.grey.shade100),
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'Item',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'HSN',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'Qty',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'MRP',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'Rate',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'Amount',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ],
                 ),
-              ),
+                ...widget.selectedProducts.map((item) {
+                  final product = item['product'];
+                  final quantity = item['quantity'] as int;
+                  final price = item['price'] as double;
+                  return TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(product.name),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(product.hsnCode),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(quantity.toString()),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text('₹${product.mrp.toStringAsFixed(2)}'),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text('₹${price.toStringAsFixed(2)}'),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          '₹${(quantity * price).toStringAsFixed(2)}',
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ],
             ),
 
             const SizedBox(height: 16),
@@ -425,29 +561,115 @@ class _BillGenerationScreenState extends State<BillGenerationScreen> {
               pw.Text('Date: ${sale.saleDate.toString().split(' ')[0]}'),
               pw.SizedBox(height: 16),
 
-              // Customer Details
-              pw.Text(
-                'Bill To / ग्राहक विवरण',
-                style: pw.TextStyle(
-                  fontSize: 16,
-                  fontWeight: pw.FontWeight.bold,
-                ),
+              // Bill To & Ship To
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Bill To
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(10),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromHex(
+                          '#e3f2fd',
+                        ), // Colors.blue.shade50
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(
+                          color: PdfColor.fromHex('#90caf9'),
+                        ), // Colors.blue.shade200
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'Bill To:',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12,
+                              color: PdfColors.blue,
+                            ),
+                          ),
+                          pw.SizedBox(height: 4),
+                          pw.Text(
+                            sale.customerName,
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                          ),
+                          pw.Text(
+                            '${widget.customer.address}, ${widget.customer.city ?? ''}',
+                          ),
+                          if (widget.customer.state != null ||
+                              widget.customer.pinCode != null)
+                            pw.Text(
+                              '${widget.customer.state ?? ''} - ${widget.customer.pinCode ?? ''}',
+                            ),
+                          pw.Text('Mobile: ${sale.customerMobile}'),
+                          if (widget.customer.gstNumber != null &&
+                              widget.customer.gstNumber!.isNotEmpty)
+                            pw.Text(
+                              'GSTIN: ${widget.customer.gstNumber}',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 12),
+                  // Ship To
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(10),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromHex(
+                          '#fff3e0',
+                        ), // Colors.orange.shade50
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(
+                          color: PdfColor.fromHex('#ffcc80'),
+                        ), // Colors.orange.shade200
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'Ship To:',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12,
+                              color: PdfColors.orange,
+                            ),
+                          ),
+                          pw.SizedBox(height: 4),
+                          pw.Text(
+                            sale.customerName,
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                          ),
+                          pw.Text(
+                            '${widget.customer.address}, ${widget.customer.city ?? ''}',
+                          ),
+                          if (widget.customer.state != null ||
+                              widget.customer.pinCode != null)
+                            pw.Text(
+                              '${widget.customer.state ?? ''} - ${widget.customer.pinCode ?? ''}',
+                            ),
+                          pw.Text('Mobile: ${sale.customerMobile}'),
+                          if (widget.customer.gstNumber != null &&
+                              widget.customer.gstNumber!.isNotEmpty)
+                            pw.Text(
+                              'GSTIN: ${widget.customer.gstNumber}',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              pw.SizedBox(height: 8),
-              pw.Text(
-                'Name: ${sale.customerName}',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              pw.Text(
-                'Mobile: ${sale.customerMobile} | Address: ${widget.customer.address}',
-              ),
-              if (widget.customer.pinCode != null) ...[
-                pw.Text('Pincode: ${widget.customer.pinCode}'),
-              ],
-              pw.Text(
-                'Status: ${widget.customer.status} | Country: ${widget.customer.country}',
-              ),
-              pw.Text('GST No: Not Applicable'),
               pw.SizedBox(height: 16),
 
               // Items Table
@@ -649,28 +871,21 @@ class _BillGenerationScreenState extends State<BillGenerationScreen> {
                           child: pw.Column(
                             children: [
                               pw.Text(
-                                'Authorized Signatory',
+                                widget.companyData?['name'] ?? 'Company Name',
                                 style: pw.TextStyle(
                                   fontSize: 12,
                                   fontWeight: pw.FontWeight.bold,
                                 ),
+                                textAlign: pw.TextAlign.center,
                               ),
+                              pw.SizedBox(height: 30),
+                              pw.Container(height: 1, color: PdfColors.black),
                               pw.SizedBox(height: 4),
                               pw.Text(
-                                widget.companyData?['name'] ?? 'Company Name',
+                                'Authorized Signatory',
                                 style: pw.TextStyle(
                                   fontSize: 10,
                                   fontWeight: pw.FontWeight.bold,
-                                ),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                              pw.SizedBox(height: 15),
-                              pw.Container(height: 1, color: PdfColors.black),
-                              pw.Text(
-                                'हस्ताक्षर',
-                                style: pw.TextStyle(
-                                  fontSize: 10,
-                                  fontStyle: pw.FontStyle.italic,
                                 ),
                               ),
                             ],

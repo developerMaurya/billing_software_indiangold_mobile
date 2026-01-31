@@ -17,6 +17,8 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _mobileController = TextEditingController();
+
+  bool _isImageRemoved = false;
   final _addressController = TextEditingController();
   final _emailController = TextEditingController();
   final _pinCodeController = TextEditingController();
@@ -34,14 +36,58 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
 
   final CustomerService _customerService = CustomerService();
 
-  Future<void> _pickImage() async {
+  Future<void> _showImagePickerOptions() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageSource(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageSource(ImageSource.gallery);
+                },
+              ),
+              if (_imageFile != null || widget.customer?.imageUrl != null)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Remove Photo',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeImage();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImageSource(ImageSource source) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-      );
+      final XFile? pickedFile = await _picker.pickImage(source: source);
       if (pickedFile != null) {
         setState(() {
           _imageFile = File(pickedFile.path);
+          _isImageRemoved = false;
         });
       }
     } catch (e) {
@@ -54,6 +100,13 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
         );
       }
     }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _imageFile = null;
+      _isImageRemoved = true;
+    });
   }
 
   @override
@@ -109,8 +162,12 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
           status: _status,
           country: _countryController.text.trim().isEmpty
               ? 'India'
-              : _countryController.text.trim(), // Default
-          imageUrl: widget.customer?.imageUrl, // Keep existing if not changing
+              : _countryController.text.trim(),
+          imageUrl: _imageFile != null
+              ? widget
+                    .customer
+                    ?.imageUrl // Service will overwrite this
+              : (_isImageRemoved ? null : widget.customer?.imageUrl),
         );
 
         if (widget.customer == null) {
@@ -228,7 +285,7 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                 child: Column(
                   children: [
                     GestureDetector(
-                      onTap: _pickImage,
+                      onTap: _showImagePickerOptions,
                       child: Stack(
                         children: [
                           Container(
@@ -250,7 +307,8 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                                       image: FileImage(_imageFile!),
                                       fit: BoxFit.cover,
                                     )
-                                  : widget.customer?.imageUrl != null
+                                  : (widget.customer?.imageUrl != null &&
+                                        !_isImageRemoved)
                                   ? DecorationImage(
                                       image: NetworkImage(
                                         widget.customer!.imageUrl!,
@@ -261,7 +319,8 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                             ),
                             child:
                                 _imageFile == null &&
-                                    widget.customer?.imageUrl == null
+                                    (widget.customer?.imageUrl == null ||
+                                        _isImageRemoved)
                                 ? Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [

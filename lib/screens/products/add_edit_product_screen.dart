@@ -27,6 +27,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _categoryController = TextEditingController();
   final _unitSizeController = TextEditingController();
 
+  bool _isImageRemoved = false;
+
   String? _productType;
   final List<String> _productTypes = [
     'Bottle',
@@ -82,14 +84,58 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _showImagePickerOptions() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageSource(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageSource(ImageSource.gallery);
+                },
+              ),
+              if (_imageFile != null || widget.product?.imageUrl != null)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Remove Photo',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeImage();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImageSource(ImageSource source) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-      );
+      final XFile? pickedFile = await _picker.pickImage(source: source);
       if (pickedFile != null) {
         setState(() {
           _imageFile = File(pickedFile.path);
+          _isImageRemoved = false;
         });
       }
     } catch (e) {
@@ -102,6 +148,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         );
       }
     }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _imageFile = null;
+      _isImageRemoved = true;
+    });
   }
 
   Future<void> _saveProduct() async {
@@ -125,7 +178,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           unitSize: _unitSizeController.text.trim().isEmpty
               ? null
               : _unitSizeController.text.trim(),
-          imageUrl: widget.product?.imageUrl, // Keep existing if not changing
+          imageUrl: _imageFile != null
+              ? widget
+                    .product
+                    ?.imageUrl // Service will overwrite
+              : (_isImageRemoved ? null : widget.product?.imageUrl),
           expireDate: _expireDate,
           createdAt: widget.product?.createdAt ?? DateTime.now(),
         );
@@ -239,7 +296,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 child: Column(
                   children: [
                     GestureDetector(
-                      onTap: _pickImage,
+                      onTap: _showImagePickerOptions,
                       child: Stack(
                         children: [
                           Container(
@@ -261,7 +318,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                                       image: FileImage(_imageFile!),
                                       fit: BoxFit.cover,
                                     )
-                                  : widget.product?.imageUrl != null
+                                  : (widget.product?.imageUrl != null &&
+                                        !_isImageRemoved)
                                   ? DecorationImage(
                                       image: NetworkImage(
                                         widget.product!.imageUrl!,
@@ -272,7 +330,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             ),
                             child:
                                 _imageFile == null &&
-                                    widget.product?.imageUrl == null
+                                    (widget.product?.imageUrl == null ||
+                                        _isImageRemoved)
                                 ? Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
