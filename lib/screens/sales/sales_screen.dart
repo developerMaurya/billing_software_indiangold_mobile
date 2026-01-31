@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -383,12 +384,23 @@ class _SalesScreenState extends State<SalesScreen> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   child: ListTile(
                                     leading: item['product'].imageUrl != null
-                                        ? Image.network(
-                                            item['product'].imageUrl!,
-                                            width: 40,
-                                            height: 40,
-                                            fit: BoxFit.cover,
-                                          )
+                                        ? (item['product'].imageUrl!.startsWith(
+                                                'http',
+                                              )
+                                              ? Image.network(
+                                                  item['product'].imageUrl!,
+                                                  width: 40,
+                                                  height: 40,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Image.file(
+                                                  File(
+                                                    item['product'].imageUrl!,
+                                                  ),
+                                                  width: 40,
+                                                  height: 40,
+                                                  fit: BoxFit.cover,
+                                                ))
                                         : const Icon(Icons.inventory_2),
                                     title: Text(item['product'].name),
                                     subtitle: Column(

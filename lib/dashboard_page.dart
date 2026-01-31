@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'main.dart';
@@ -45,6 +47,16 @@ class _DashboardPageState extends State<DashboardPage>
   Map<String, double> categoryStock = {};
   List<int> monthlyCustomers = List.filled(6, 0); // Last 6 months
 
+  // Banner
+  final PageController _bannerController = PageController();
+  int _currentBannerIndex = 0;
+  Timer? _bannerTimer;
+  final List<String> _bannerImages = [
+    'assets/images/banner1.jpg',
+    'assets/images/banner2.jpg',
+    'assets/images/banner3.jpg',
+  ];
+
   int _selectedIndex = 0;
 
   @override
@@ -63,11 +75,28 @@ class _DashboardPageState extends State<DashboardPage>
     if (mounted) {
       _controller.forward();
     }
+
+    _bannerTimer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+      if (_currentBannerIndex < _bannerImages.length - 1) {
+        _currentBannerIndex++;
+      } else {
+        _currentBannerIndex = 0;
+      }
+      if (_bannerController.hasClients) {
+        _bannerController.animateToPage(
+          _currentBannerIndex,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeIn,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _bannerTimer?.cancel();
+    _bannerController.dispose();
     super.dispose();
   }
 
@@ -211,7 +240,15 @@ class _DashboardPageState extends State<DashboardPage>
           categoryStock = catStock;
           totalCustomers = cCount;
           totalSales = tSales;
-          salesTrend = trend;
+          salesTrend = trend.isEmpty
+              ? List.generate(
+                  7,
+                  (i) => FlSpot(
+                    i.toDouble(),
+                    (i % 2 == 0 ? 3000 : 5000) + (i * 500).toDouble(),
+                  ),
+                )
+              : trend;
           topSellingProduct = topProduct;
         });
       }
@@ -360,11 +397,15 @@ class _DashboardPageState extends State<DashboardPage>
           ),
           const Divider(),
           _drawerItem(Icons.settings, 'Settings', () => _showSettings()),
-          _drawerItem(
-            Icons.person,
-            'Profile',
-            () => _navigateToPage(ProfilePage(uid: currentUid)),
-          ),
+          _drawerItem(Icons.person, 'Profile', () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfilePage(uid: currentUid),
+              ),
+            );
+            _fetchCompanyData();
+          }),
           _drawerItem(
             Icons.analytics,
             'Reports',
@@ -423,6 +464,8 @@ class _DashboardPageState extends State<DashboardPage>
                 children: [
                   if (companyData != null) ...[
                     _buildWelcomeSection(),
+                    const SizedBox(height: 20),
+                    _buildBannerSection(),
                     const SizedBox(height: 25),
                     _buildStatsCards(),
                     const SizedBox(height: 25),
@@ -489,7 +532,9 @@ class _DashboardPageState extends State<DashboardPage>
           radius: 30,
           backgroundColor: Colors.green.shade100,
           backgroundImage: companyData!['logo'] != null
-              ? NetworkImage(companyData!['logo'])
+              ? (companyData!['logo']!.startsWith('http')
+                    ? NetworkImage(companyData!['logo'])
+                    : FileImage(File(companyData!['logo'])) as ImageProvider)
               : null,
           child: companyData!['logo'] == null
               ? Icon(Icons.store, size: 30, color: Colors.green.shade800)
@@ -678,82 +723,211 @@ class _DashboardPageState extends State<DashboardPage>
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             children: [
-              // Chart 1: Sales Trend (Line Chart)
+              // Chart 1: Sales Trend (Multi-Line Chart)
               _chartContainer(
-                title: 'Sales Trend',
+                title: 'Live Sales Analytics',
                 child: salesTrend.isEmpty
                     ? const Center(child: Text("No Data"))
-                    : LineChart(
-                        LineChartData(
-                          gridData: FlGridData(show: false),
-                          titlesData: FlTitlesData(
-                            leftTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
+                    : Column(
+                        children: [
+                          Expanded(
+                            child: LineChart(
+                              LineChartData(
+                                gridData: FlGridData(
+                                  show: true,
+                                  drawVerticalLine: false,
+                                  horizontalInterval: 1000,
+                                  getDrawingHorizontalLine: (value) {
+                                    return FlLine(
+                                      color: Colors.grey.withOpacity(0.1),
+                                      strokeWidth: 1,
+                                    );
+                                  },
+                                ),
+                                titlesData: FlTitlesData(
+                                  leftTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      reservedSize: 40,
+                                      getTitlesWidget: (value, meta) {
+                                        return Text(
+                                          NumberFormat.compact().format(value),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  topTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  rightTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      reservedSize: 22,
+                                      interval: 7, // Show every 7 days
+                                      getTitlesWidget: (value, meta) {
+                                        // Assuming x-axis represents days (0-29)
+                                        if (value.toInt() % 7 == 0) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 8.0,
+                                            ),
+                                            child: Text(
+                                              'Day ${value.toInt() + 1}',
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return const SizedBox();
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                borderData: FlBorderData(show: false),
+                                lineTouchData: LineTouchData(
+                                  touchTooltipData: LineTouchTooltipData(
+                                    getTooltipColor: (touchedSpot) =>
+                                        Colors.blueGrey.shade900,
+                                    tooltipPadding: const EdgeInsets.all(8),
+                                    getTooltipItems: (touchedSpots) {
+                                      return touchedSpots.map((spot) {
+                                        return LineTooltipItem(
+                                          '₹${spot.y.toStringAsFixed(0)}',
+                                          const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        );
+                                      }).toList();
+                                    },
+                                  ),
+                                ),
+                                lineBarsData: [
+                                  // Blue: Total Sales
+                                  LineChartBarData(
+                                    spots: salesTrend,
+                                    isCurved: true,
+                                    color: Colors.blue,
+                                    barWidth: 3,
+                                    dotData: FlDotData(show: false),
+                                    belowBarData: BarAreaData(
+                                      show: true,
+                                      color: Colors.blue.withOpacity(0.1),
+                                    ),
+                                  ),
+                                  // Red: Medical Sales (Mock)
+                                  LineChartBarData(
+                                    spots: salesTrend
+                                        .map((e) => FlSpot(e.x, e.y * 0.7))
+                                        .toList(),
+                                    isCurved: true,
+                                    color: Colors.redAccent,
+                                    barWidth: 2,
+                                    dotData: FlDotData(show: false),
+                                  ),
+                                  // Green: Product Sales (Mock)
+                                  LineChartBarData(
+                                    spots: salesTrend
+                                        .map((e) => FlSpot(e.x, e.y * 0.5))
+                                        .toList(),
+                                    isCurved: true,
+                                    color: Colors.green,
+                                    barWidth: 2,
+                                    dotData: FlDotData(show: false),
+                                  ),
+                                  // Yellow: Other (Mock)
+                                  LineChartBarData(
+                                    spots: salesTrend
+                                        .map((e) => FlSpot(e.x, e.y * 0.3))
+                                        .toList(),
+                                    isCurved: true,
+                                    color: Colors.amber,
+                                    barWidth: 2,
+                                    dotData: FlDotData(show: false),
+                                  ),
+                                ],
+                              ),
                             ),
-                            topTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            rightTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ), // Simplified for demo
                           ),
-                          borderData: FlBorderData(show: false),
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: salesTrend,
-                              isCurved: true,
-                              color: Colors.blue,
-                              barWidth: 3,
-                              dotData: FlDotData(show: false),
-                              belowBarData: BarAreaData(
-                                show: true,
-                                color: Colors.blue.withOpacity(0.1),
-                              ),
-                            ),
-                          ],
-                        ),
+                          const SizedBox(height: 10),
+                          // Legend
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 4,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              _chartLegendItem('Total', Colors.blue),
+                              _chartLegendItem('Medical', Colors.redAccent),
+                              _chartLegendItem('Product', Colors.green),
+                              _chartLegendItem('Other', Colors.amber),
+                            ],
+                          ),
+                        ],
                       ),
               ),
               const SizedBox(width: 15),
 
-              // Chart 2: Stock Distribution (Pie Chart)
+              // Chart 2: Stock Management (Pie Chart)
               _chartContainer(
-                title: 'Stock Category',
-                child: categoryStock.isEmpty
-                    ? const Center(child: Text("No Stock"))
-                    : PieChart(
-                        PieChartData(
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 30,
-                          sections: categoryStock.entries.map((e) {
-                            final index = categoryStock.keys.toList().indexOf(
-                              e.key,
-                            );
-                            final color = Colors
-                                .primaries[index % Colors.primaries.length];
-                            return PieChartSectionData(
-                              color: color,
-                              value: e.value,
-                              title: '${e.value.toInt()}',
-                              radius: 40,
-                              titleStyle: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            );
-                          }).toList(),
+                title: 'Stock Management',
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 30,
+                    sections: [
+                      PieChartSectionData(
+                        color: Colors.green,
+                        value: (totalProducts - lowStockCount - outOfStockCount)
+                            .toDouble(),
+                        title: 'Good',
+                        radius: 40,
+                        titleStyle: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                      PieChartSectionData(
+                        color: Colors.orange,
+                        value: lowStockCount.toDouble(),
+                        title: 'Low',
+                        radius: 40,
+                        titleStyle: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      PieChartSectionData(
+                        color: Colors.red,
+                        value: outOfStockCount.toDouble(),
+                        title: 'Out',
+                        radius: 40,
+                        titleStyle: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(width: 15),
 
-              // Chart 3: Customers (Bar Chart) - Simulated for Demo if no historical customer data
+              // Chart 3: Product Categories (Bar Chart) - Renamed from "Stock Management"
               _chartContainer(
-                title: 'New Customers',
+                title: 'Product Categories',
                 child: BarChart(
                   BarChartData(
                     gridData: FlGridData(show: false),
@@ -771,28 +945,39 @@ class _DashboardPageState extends State<DashboardPage>
                         sideTitles: SideTitles(
                           showTitles: true,
                           getTitlesWidget: (val, meta) {
-                            return Text(
-                              'M${val.toInt() + 1}',
-                              style: const TextStyle(fontSize: 10),
-                            );
+                            if (val.toInt() < categoryStock.length) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  categoryStock.keys
+                                      .elementAt(val.toInt())
+                                      .substring(0, 3),
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              );
+                            }
+                            return const SizedBox();
                           },
                         ),
                       ),
                     ),
                     borderData: FlBorderData(show: false),
-                    barGroups: List.generate(6, (index) {
-                      return BarChartGroupData(
-                        x: index,
-                        barRods: [
-                          BarChartRodData(
-                            toY: (index + 2) * 5.0, // Mock data increasing
-                            color: Colors.purple.shade300,
-                            width: 12,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ],
-                      );
-                    }),
+                    barGroups: List.generate(
+                      categoryStock.length > 5 ? 5 : categoryStock.length,
+                      (index) {
+                        return BarChartGroupData(
+                          x: index,
+                          barRods: [
+                            BarChartRodData(
+                              toY: categoryStock.values.elementAt(index),
+                              color: Colors.indigo.shade400,
+                              width: 12,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -833,6 +1018,129 @@ class _DashboardPageState extends State<DashboardPage>
           Expanded(child: child),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 16, // Slightly smaller
+        fontWeight: FontWeight.bold,
+        color: Colors.green.shade900,
+      ),
+    );
+  }
+
+  Widget _buildBannerSection() {
+    return Column(
+      children: [
+        SizedBox(
+          height: 180,
+          child: PageView.builder(
+            controller: _bannerController,
+            itemCount: _bannerImages.length,
+            onPageChanged: (index) {
+              setState(() => _currentBannerIndex = index);
+            },
+            itemBuilder: (context, index) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        _bannerImages[index],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade300,
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.6),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                        alignment: Alignment.bottomLeft,
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          index == 0
+                              ? 'Grow Your Business'
+                              : index == 1
+                              ? 'Track Sales Live'
+                              : 'Manage Your Team',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: _bannerImages.asMap().entries.map((entry) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: _currentBannerIndex == entry.key ? 24 : 8,
+              height: 8,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: _currentBannerIndex == entry.key
+                    ? Colors.green.shade700
+                    : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _chartLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700,
+          ),
+        ),
+      ],
     );
   }
 }

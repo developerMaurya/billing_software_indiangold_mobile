@@ -42,6 +42,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   ];
 
   File? _imageFile;
+  bool _isImageRemoved = false;
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
   DateTime? _expireDate;
@@ -90,6 +91,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       if (pickedFile != null) {
         setState(() {
           _imageFile = File(pickedFile.path);
+          _isImageRemoved = false;
         });
       }
     } catch (e) {
@@ -102,6 +104,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         );
       }
     }
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _imageFile = null;
+      _isImageRemoved = true;
+    });
   }
 
   Future<void> _saveProduct() async {
@@ -133,7 +142,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         if (widget.product == null) {
           await _productService.addProduct(product, _imageFile);
         } else {
-          await _productService.updateProduct(product, _imageFile);
+          await _productService.updateProduct(
+            product,
+            _imageFile,
+            deleteImage: _isImageRemoved,
+          );
         }
 
         if (mounted) {
@@ -251,7 +264,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               border: Border.all(
                                 color:
                                     _imageFile != null ||
-                                        widget.product?.imageUrl != null
+                                        (widget.product?.imageUrl != null &&
+                                            !_isImageRemoved)
                                     ? Colors.green.shade400
                                     : Colors.grey.shade400,
                                 width: 2,
@@ -261,18 +275,29 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                                       image: FileImage(_imageFile!),
                                       fit: BoxFit.cover,
                                     )
-                                  : widget.product?.imageUrl != null
-                                  ? DecorationImage(
-                                      image: NetworkImage(
-                                        widget.product!.imageUrl!,
-                                      ),
-                                      fit: BoxFit.cover,
-                                    )
+                                  : (widget.product?.imageUrl != null &&
+                                        !_isImageRemoved)
+                                  ? (widget.product!.imageUrl!.startsWith(
+                                          'http',
+                                        )
+                                        ? DecorationImage(
+                                            image: NetworkImage(
+                                              widget.product!.imageUrl!,
+                                            ),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : DecorationImage(
+                                            image: FileImage(
+                                              File(widget.product!.imageUrl!),
+                                            ),
+                                            fit: BoxFit.cover,
+                                          ))
                                   : null,
                             ),
                             child:
                                 _imageFile == null &&
-                                    widget.product?.imageUrl == null
+                                    (widget.product?.imageUrl == null ||
+                                        _isImageRemoved)
                                 ? Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -311,6 +336,23 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         ],
                       ),
                     ),
+                    if (_imageFile != null ||
+                        (widget.product?.imageUrl != null && !_isImageRemoved))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: TextButton.icon(
+                          onPressed: _removePhoto,
+                          icon: const Icon(
+                            Icons.delete,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          label: const Text(
+                            'Remove Photo',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ),
                     if (_imageFile != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../../models/product_model.dart';
 import '../../models/sale_model.dart';
 import '../../services/product_service.dart';
@@ -396,10 +397,15 @@ class _InventoryPageState extends State<InventoryPage> {
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(8),
                     image: product.imageUrl != null
-                        ? DecorationImage(
-                            image: NetworkImage(product.imageUrl!),
-                            fit: BoxFit.cover,
-                          )
+                        ? (product.imageUrl!.startsWith('http')
+                              ? DecorationImage(
+                                  image: NetworkImage(product.imageUrl!),
+                                  fit: BoxFit.cover,
+                                )
+                              : DecorationImage(
+                                  image: FileImage(File(product.imageUrl!)),
+                                  fit: BoxFit.cover,
+                                ))
                         : null,
                   ),
                   child: product.imageUrl == null

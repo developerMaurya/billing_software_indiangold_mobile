@@ -30,6 +30,7 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
   String _status = 'Active';
   bool _isLoading = false;
   File? _imageFile;
+  bool _isImageRemoved = false;
   final ImagePicker _picker = ImagePicker();
 
   final CustomerService _customerService = CustomerService();
@@ -42,6 +43,7 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
       if (pickedFile != null) {
         setState(() {
           _imageFile = File(pickedFile.path);
+          _isImageRemoved = false;
         });
       }
     } catch (e) {
@@ -54,6 +56,13 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
         );
       }
     }
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _imageFile = null;
+      _isImageRemoved = true;
+    });
   }
 
   @override
@@ -116,7 +125,11 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
         if (widget.customer == null) {
           await _customerService.addCustomer(customer, _imageFile);
         } else {
-          await _customerService.updateCustomer(customer, _imageFile);
+          await _customerService.updateCustomer(
+            customer,
+            _imageFile,
+            deleteImage: _isImageRemoved,
+          );
         }
 
         if (mounted) {
@@ -198,6 +211,35 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
     }
   }
 
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Colors.green.shade900,
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: Colors.green.shade700),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.green.shade700, width: 2),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -250,18 +292,29 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                                       image: FileImage(_imageFile!),
                                       fit: BoxFit.cover,
                                     )
-                                  : widget.customer?.imageUrl != null
-                                  ? DecorationImage(
-                                      image: NetworkImage(
-                                        widget.customer!.imageUrl!,
-                                      ),
-                                      fit: BoxFit.cover,
-                                    )
+                                  : (widget.customer?.imageUrl != null &&
+                                        !_isImageRemoved)
+                                  ? (widget.customer!.imageUrl!.startsWith(
+                                          'http',
+                                        )
+                                        ? DecorationImage(
+                                            image: NetworkImage(
+                                              widget.customer!.imageUrl!,
+                                            ),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : DecorationImage(
+                                            image: FileImage(
+                                              File(widget.customer!.imageUrl!),
+                                            ),
+                                            fit: BoxFit.cover,
+                                          ))
                                   : null,
                             ),
                             child:
                                 _imageFile == null &&
-                                    widget.customer?.imageUrl == null
+                                    (widget.customer?.imageUrl == null ||
+                                        _isImageRemoved)
                                 ? Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -301,6 +354,23 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                         ],
                       ),
                     ),
+                    if (_imageFile != null ||
+                        (widget.customer?.imageUrl != null && !_isImageRemoved))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: TextButton.icon(
+                          onPressed: _removePhoto,
+                          icon: const Icon(
+                            Icons.delete,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          label: const Text(
+                            'Remove Photo',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ),
                     if (_imageFile != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -478,35 +548,6 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: Colors.green.shade700),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.green.shade700, width: 2),
-      ),
-      filled: true,
-      fillColor: Colors.white,
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.green.shade900,
       ),
     );
   }

@@ -401,159 +401,242 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
   void _showSaleDetails(SaleModel sale) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Bill #${sale.billNumber ?? 'N/A'}'),
-        content: SingleChildScrollView(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Customer Info
-              Text(
-                'Customer: ${sale.customerName ?? 'Walk-in Customer'}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Bill Receipt',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _viewPdf(sale);
+                    },
+                    icon: const Icon(Icons.print, color: Colors.blue),
+                    tooltip: 'Print / View PDF',
+                  ),
+                ],
               ),
-              if (sale.customerMobile != null) ...[
-                const SizedBox(height: 4),
-                Text('Mobile: ${sale.customerMobile}'),
-              ],
-              const SizedBox(height: 8),
-              Text(
-                'Date: ${DateFormat('dd/MM/yyyy HH:mm').format(sale.saleDate)}',
-              ),
-              const SizedBox(height: 16),
-
-              // Items
-              const Text(
-                'Items:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ...sale.items.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              const Divider(),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Text(
-                          '${item.productName} (x${item.quantity})',
-                          style: const TextStyle(fontSize: 14),
+                      // Bill Info
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Bill #${sale.billNumber ?? "N/A"}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat(
+                                'dd MMM yyyy, hh:mm a',
+                              ).format(sale.saleDate),
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        '₹${item.amount.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 14),
+                      const SizedBox(height: 20),
+
+                      // Customer Info
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.person_pin, color: Colors.green),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                sale.customerName ?? 'Walk-in Customer',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (sale.customerMobile != null)
+                                Text(
+                                  sale.customerMobile!,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(),
+
+                      // Items Header
+                      Row(
+                        children: const [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              'Item',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Qty',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Total',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Items List
+                      ...sale.items.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item.productName),
+                                    Text(
+                                      '₹${(item.amount / item.quantity).toStringAsFixed(2)}/unit',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  '${item.quantity}',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  '₹${item.amount.toStringAsFixed(2)}',
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Divider(),
+
+                      // Totals
+                      _buildTotalRow('Subtotal', sale.subtotal, isBold: false),
+                      if (sale.discountPercent > 0)
+                        _buildTotalRow(
+                          'Discount (${sale.discountPercent}%)',
+                          -(sale.subtotal * sale.discountPercent / 100),
+                          color: Colors.red,
+                        ),
+                      _buildTotalRow(
+                        'GST (${sale.gstPercent}%)',
+                        sale.gstAmount,
+                        isBold: false,
+                      ),
+                      const Divider(),
+                      _buildTotalRow(
+                        'Grand Total',
+                        sale.totalAmount,
+                        isBold: true,
+                        fontSize: 18,
+                        color: Colors.green.shade800,
                       ),
                     ],
                   ),
                 ),
               ),
-
-              const Divider(),
-              // Subtotal
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Subtotal:'),
-                  Text('₹${sale.subtotal.toStringAsFixed(2)}'),
-                ],
-              ),
-              if (sale.discountPercent > 0)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Discount (${sale.discountPercent}%):',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    Text(
-                      '-₹${(sale.subtotal * sale.discountPercent / 100).toStringAsFixed(2)}',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ],
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('Close'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Taxable Amount:'),
-                  Text(
-                    '₹${(sale.subtotal - (sale.subtotal * sale.discountPercent / 100)).toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              // GST Breakdown
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Total GST (${sale.gstPercent}%):'),
-                  Text('₹${sale.gstAmount.toStringAsFixed(2)}'),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'IGST / SGST (${(sale.gstPercent / 2).toStringAsFixed(1)}%):',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  Text(
-                    '₹${(sale.gstAmount / 2).toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'CGST (${(sale.gstPercent / 2).toStringAsFixed(1)}%):',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  Text(
-                    '₹${(sale.gstAmount / 2).toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Total Amount:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '₹${sale.totalAmount.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade800,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              _viewPdf(sale);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade700,
-              foregroundColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildTotalRow(
+    String label,
+    double amount, {
+    bool isBold = false,
+    double fontSize = 14,
+    Color? color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: fontSize,
+              color: color,
             ),
-            child: const Text('View PDF'),
+          ),
+          Text(
+            '₹${amount.abs().toStringAsFixed(2)}',
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: fontSize,
+              color: color,
+            ),
           ),
         ],
       ),

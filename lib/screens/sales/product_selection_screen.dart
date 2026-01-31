@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
@@ -263,10 +264,15 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
                     borderRadius: BorderRadius.circular(8),
                     image:
                         product.imageUrl != null && product.imageUrl!.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(product.imageUrl!),
-                            fit: BoxFit.cover,
-                          )
+                        ? (product.imageUrl!.startsWith('http')
+                              ? DecorationImage(
+                                  image: NetworkImage(product.imageUrl!),
+                                  fit: BoxFit.cover,
+                                )
+                              : DecorationImage(
+                                  image: FileImage(File(product.imageUrl!)),
+                                  fit: BoxFit.cover,
+                                ))
                         : null,
                   ),
                   child: product.imageUrl == null || product.imageUrl!.isEmpty

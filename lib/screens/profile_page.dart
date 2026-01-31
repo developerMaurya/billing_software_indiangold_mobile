@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class ProfilePage extends StatefulWidget {
   final String? uid;
@@ -111,7 +113,9 @@ class _ProfilePageState extends State<ProfilePage> {
             _licenseController.text = (data['license'] ?? '').toString();
             _statusController.text = (data['status'] ?? 'Active').toString();
             _countryController.text = (data['country'] ?? 'India').toString();
-            _logoUrl = data['logo'];
+            _logoUrl =
+                data['company_logo'] ??
+                data['logo']; // Check company_logo first
           });
           debugPrint('ProfilePage: Data loaded successfully');
         } else {
@@ -152,9 +156,13 @@ class _ProfilePageState extends State<ProfilePage> {
         source: ImageSource.gallery,
       );
       if (pickedFile != null) {
+        debugPrint('Image Picked: ${pickedFile.path}');
+        debugPrint('Original Name: ${pickedFile.name}');
         setState(() {
           _logoFile = File(pickedFile.path);
         });
+      } else {
+        debugPrint('Image selection cancelled');
       }
     } catch (e) {
       if (mounted) {
@@ -176,20 +184,140 @@ class _ProfilePageState extends State<ProfilePage> {
       final targetUid = widget.uid ?? user?.uid;
 
       if (targetUid == null) {
-        debugPrint('Error: No User ID found for logo upload');
+        debugPrint('Error: No User ID found');
         return null;
       }
 
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('company_logos')
-          .child('${targetUid}.jpg');
+      // 1. Get Original Filename
+      String fileName = path.basename(_logoFile!.path);
+      if (fileName.isEmpty) {
+        fileName = '${targetUid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      }
 
-      await storageRef.putFile(_logoFile!);
-      return await storageRef.getDownloadURL();
+      debugPrint('Processing Image: $fileName');
+
+      // 2. SAVE LOCALLY (First priority as requested)
+      String? localSavedPath;
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        // Create the specific folder structure: uploads/images
+        final saveDir = Directory(path.join(appDir.path, 'uploads', 'images'));
+
+        if (!await saveDir.exists()) {
+          await saveDir.create(recursive: true);
+        }
+
+        final targetFile = File(path.join(saveDir.path, fileName));
+
+        // Copy the picked file to this new location
+        await _logoFile!.copy(targetFile.path);
+        localSavedPath = targetFile.path;
+
+        debugPrint('Image saved locally to: $localSavedPath');
+      } catch (e) {
+        debugPrint('Error saving locally: $e');
+        // Fallback: Use the original picked path so UI updates immediately
+        localSavedPath = _logoFile!.path;
+      }
+
+      // 3. UPLOAD TO FIREBASE (Cloud Sync)
+      try {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('uploads')
+            .child('images')
+            .child(fileName);
+
+        debugPrint('Uploading to Firebase: uploads/images/$fileName');
+        await storageRef.putFile(_logoFile!);
+        final downloadUrl = await storageRef.getDownloadURL();
+        debugPrint('Firebase Download URL: $downloadUrl');
+
+        // Return Cloud URL if successful
+        return downloadUrl;
+      } catch (firebaseError) {
+        debugPrint('Firebase Upload Failed: $firebaseError');
+
+        // Return local path fallback so UI updates
+        debugPrint('Returning local path fallback: $localSavedPath');
+        return localSavedPath;
+      }
     } catch (e) {
-      debugPrint('Error uploading logo: $e');
+      debugPrint('Critial error in _uploadLogo: $e');
       return null;
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Photo'),
+        content: const Text(
+          'Are you sure you want to remove your profile photo?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final targetUid = widget.uid ?? user?.uid;
+
+      if (targetUid != null) {
+        // Remove from Firestore
+        await FirebaseFirestore.instance
+            .collection('shops')
+            .doc(targetUid)
+            .update({
+              'company_logo': null,
+              'logo': null, // Clear legacy field too
+            });
+
+        // Update local state
+        setState(() {
+          _logoFile = null;
+          _logoUrl = null;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Photo removed successfully')),
+          );
+        }
+
+        // Try to delete from local storage if exists
+        try {
+          final appDir = await getApplicationDocumentsDirectory();
+          // We try to guess the filename or delete all in the folder for this user.
+          // Since we don't know the exact file name without re-fetching,
+          // we'll just leave the file or clear the state. Clearing state is enough for UI.
+        } catch (e) {
+          debugPrint("Error clearing local file: $e");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error removing photo: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -204,17 +332,20 @@ class _ProfilePageState extends State<ProfilePage> {
       if (targetUid == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error: No valid User ID found to save data.'),
-            ),
+            const SnackBar(content: Text('Error: No valid User ID found.')),
           );
         }
         return;
       }
 
-      final logoUrl = await _uploadLogo();
+      debugPrint('Starting profile save...');
 
-      final updatedData = {
+      // Upload logo first
+      final logoUrl = await _uploadLogo();
+      debugPrint('Logo URL after upload: $logoUrl');
+
+      // Prepare data
+      final updatedData = <String, dynamic>{
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'phone': _phoneController.text.trim(),
@@ -228,9 +359,20 @@ class _ProfilePageState extends State<ProfilePage> {
         'license': _licenseController.text.trim(),
         'status': _statusController.text.trim(),
         'country': _countryController.text.trim(),
-        'logo': logoUrl ?? _logoUrl, // Keep existing if upload failed/skipped
-        'updatedAt': DateTime.now(),
+        'updatedAt': FieldValue.serverTimestamp(),
       };
+
+      // Only add logo if we have one
+      if (logoUrl != null && logoUrl.isNotEmpty) {
+        updatedData['company_logo'] = logoUrl;
+      } else if (_logoUrl != null && _logoUrl!.isNotEmpty) {
+        // Keep existing logo
+        updatedData['company_logo'] = _logoUrl;
+      }
+
+      debugPrint('--------------- PROFILE UPDATE DATA ---------------');
+      debugPrint(updatedData.toString());
+      debugPrint('---------------------------------------------------');
 
       await FirebaseFirestore.instance
           .collection('shops')
@@ -238,7 +380,10 @@ class _ProfilePageState extends State<ProfilePage> {
           .set(updatedData, SetOptions(merge: true));
 
       setState(() {
-        _logoUrl = logoUrl;
+        if (logoUrl != null) {
+          _logoUrl = logoUrl;
+        }
+        _logoFile = null; // Clear picked file
       });
 
       if (mounted) {
@@ -249,7 +394,11 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         );
       }
+
+      // Reload data
+      await _loadProfileData();
     } catch (e) {
+      debugPrint('Error saving profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -259,7 +408,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -307,11 +456,17 @@ class _ProfilePageState extends State<ProfilePage> {
                                   image: FileImage(_logoFile!),
                                   fit: BoxFit.cover,
                                 )
-                              : _logoUrl != null
-                              ? DecorationImage(
-                                  image: NetworkImage(_logoUrl!),
-                                  fit: BoxFit.cover,
-                                )
+                              : _logoUrl != null && _logoUrl!.isNotEmpty
+                              ? (_logoUrl!.startsWith('http')
+                                    ? DecorationImage(
+                                        image: NetworkImage(_logoUrl!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : DecorationImage(
+                                        // It's a local path
+                                        image: FileImage(File(_logoUrl!)),
+                                        fit: BoxFit.cover,
+                                      ))
                               : null,
                         ),
                         child: _logoFile == null && _logoUrl == null
@@ -324,13 +479,28 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'Tap to change photo',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
+                    if (_logoFile != null ||
+                        (_logoUrl != null && _logoUrl!.isNotEmpty))
+                      TextButton.icon(
+                        onPressed: _removePhoto,
+                        icon: const Icon(
+                          Icons.delete,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        label: const Text(
+                          'Remove Photo',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      )
+                    else
+                      Text(
+                        'Tap to change photo',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 24),
 
                     // Information Section

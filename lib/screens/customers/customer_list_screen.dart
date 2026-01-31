@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../models/customer_model.dart';
 import '../../services/customer_service.dart';
@@ -231,7 +232,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 radius: 28,
                 backgroundColor: Colors.green.shade100,
                 backgroundImage: customer.imageUrl != null
-                    ? NetworkImage(customer.imageUrl!)
+                    ? (customer.imageUrl!.startsWith('http')
+                          ? NetworkImage(customer.imageUrl!)
+                          : FileImage(File(customer.imageUrl!))
+                                as ImageProvider)
                     : null,
                 child: customer.imageUrl == null
                     ? Text(

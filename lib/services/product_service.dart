@@ -5,6 +5,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../models/product_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class ProductService {
   late final CollectionReference _productsCollection;
@@ -67,11 +69,17 @@ class ProductService {
   }
 
   // Update
-  Future<void> updateProduct(ProductModel product, File? newImageFile) async {
+  Future<void> updateProduct(
+    ProductModel product,
+    File? newImageFile, {
+    bool deleteImage = false,
+  }) async {
     if (product.id == null) return;
     try {
       String? imageUrl = product.imageUrl;
-      if (newImageFile != null) {
+      if (deleteImage) {
+        imageUrl = null;
+      } else if (newImageFile != null) {
         imageUrl = await _uploadImage(newImageFile);
       }
 
@@ -113,17 +121,46 @@ class ProductService {
     }
   }
 
-  // Helper: Upload Image
+  // Helper: Upload Image (Hybrid: Local + Cloud)
   Future<String> _uploadImage(File file) async {
+    // 1. Prepare Filename
+    String fileName = path.basename(file.path);
+    if (fileName.isEmpty || !fileName.contains('.')) {
+      fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    }
+
+    // 2. SAVE LOCALLY (First priority)
+    String? localSavedPath;
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference ref = _storage.ref().child('product_images/$fileName');
+      final appDir = await getApplicationDocumentsDirectory();
+      final saveDir = Directory(path.join(appDir.path, 'uploads', 'products'));
+      if (!await saveDir.exists()) {
+        await saveDir.create(recursive: true);
+      }
+      final targetFile = File(path.join(saveDir.path, fileName));
+      await file.copy(targetFile.path);
+      localSavedPath = targetFile.path;
+      debugPrint('Product image saved locally: $localSavedPath');
+    } catch (e) {
+      debugPrint("Error saving locally: $e");
+      localSavedPath = file.path; // Fallback to original
+    }
+
+    // 3. UPLOAD TO FIREBASE
+    try {
+      Reference ref = _storage
+          .ref()
+          .child('uploads')
+          .child('products')
+          .child(fileName);
       UploadTask uploadTask = ref.putFile(file);
       TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
     } catch (e) {
       debugPrint("Error uploading image: $e");
-      throw Exception('Failed to upload image');
+      // Fallback to local path
+      return localSavedPath;
     }
   }
 }
