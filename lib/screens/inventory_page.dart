@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../models/product_model.dart';
 import '../../models/sale_model.dart';
 import '../../services/product_service.dart';
 import '../../services/sale_service.dart';
+import '../../utils/app_theme_provider.dart';
 
 class InventoryPage extends StatefulWidget {
   const InventoryPage({super.key});
@@ -120,15 +122,16 @@ class _InventoryPageState extends State<InventoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: appTheme.colors.background,
       appBar: AppBar(
         title: const Text(
           'Inventory Management',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: appTheme.colors.secondary,
         foregroundColor: Colors.white,
         elevation: 0,
         shape: const RoundedRectangleBorder(
@@ -236,23 +239,27 @@ class _InventoryPageState extends State<InventoryPage> {
                       'Total Products',
                       totalProducts.toString(),
                       Icons.inventory,
+                      appTheme,
                     ),
                     _buildSummaryCard(
                       'Low Stock',
                       lowStockProducts.toString(),
                       Icons.warning,
+                      appTheme,
                       Colors.orange,
                     ),
                     _buildSummaryCard(
                       'Out of Stock',
                       outOfStockProducts.toString(),
                       Icons.error,
+                      appTheme,
                       Colors.red,
                     ),
                     _buildSummaryCard(
                       'Total Value',
                       '₹${totalValue.toStringAsFixed(0)}',
                       Icons.currency_rupee,
+                      appTheme,
                     ),
                   ],
                 );
@@ -338,7 +345,8 @@ class _InventoryPageState extends State<InventoryPage> {
   Widget _buildSummaryCard(
     String title,
     String value,
-    IconData icon, [
+    IconData icon,
+    AppTheme appTheme, [
     Color? color,
   ]) {
     return Expanded(
@@ -349,7 +357,7 @@ class _InventoryPageState extends State<InventoryPage> {
           padding: const EdgeInsets.all(12),
           child: Column(
             children: [
-              Icon(icon, color: color ?? Colors.green.shade700, size: 24),
+              Icon(icon, color: color ?? appTheme.colors.primary, size: 24),
               const SizedBox(height: 4),
               Text(
                 value,

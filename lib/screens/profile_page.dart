@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:provider/provider.dart';
+import '../utils/app_theme_provider.dart';
 
 class ProfilePage extends StatefulWidget {
   final String? uid;
@@ -414,15 +416,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: appTheme.colors.background,
       appBar: AppBar(
         title: const Text(
           'My Profile',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: appTheme.colors.secondary,
         foregroundColor: Colors.white,
         elevation: 0,
         shape: const RoundedRectangleBorder(
@@ -448,7 +451,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           color: Colors.grey.shade200,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.green.shade700,
+                            color: appTheme.colors.primary,
                             width: 2,
                           ),
                           image: _logoFile != null
@@ -516,7 +519,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: ElevatedButton(
                         onPressed: _saveProfile,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
+                          backgroundColor: appTheme.colors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(

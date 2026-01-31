@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
+import '../../utils/app_theme_provider.dart';
 
 class ProductSelectionScreen extends StatefulWidget {
   const ProductSelectionScreen({super.key});
@@ -71,15 +73,16 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: appTheme.colors.background,
       appBar: AppBar(
         title: const Text(
           'Select Product',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: appTheme.colors.secondary,
         foregroundColor: Colors.white,
         elevation: 0,
         shape: const RoundedRectangleBorder(
@@ -220,7 +223,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
                   itemCount: filteredProducts.length,
                   itemBuilder: (context, index) {
                     final product = filteredProducts[index];
-                    return _buildProductCard(product);
+                    return _buildProductCard(product, appTheme);
                   },
                 );
               },
@@ -231,7 +234,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
     );
   }
 
-  Widget _buildProductCard(ProductModel product) {
+  Widget _buildProductCard(ProductModel product, AppTheme appTheme) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -245,7 +248,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
               ),
             );
           } else {
-            _showQuantityDialog(product);
+            _showQuantityDialog(product, appTheme);
           }
         },
         borderRadius: BorderRadius.circular(12),
@@ -332,7 +335,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
                     '₹${product.givenRate.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.green.shade800,
+                      color: appTheme.colors.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -355,7 +358,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
     );
   }
 
-  void _showQuantityDialog(ProductModel product) {
+  void _showQuantityDialog(ProductModel product, AppTheme appTheme) {
     final quantityController = TextEditingController(text: '1');
     int quantity = 1;
     double price = product.givenRate;
@@ -413,7 +416,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
                       }
                     },
                     icon: const Icon(Icons.add),
-                    color: Colors.green,
+                    color: appTheme.colors.primary,
                   ),
                 ],
               ),
@@ -451,9 +454,11 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: appTheme.colors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
+                  border: Border.all(
+                    color: appTheme.colors.primary.withOpacity(0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -470,7 +475,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Colors.green.shade800,
+                        color: appTheme.colors.primary,
                       ),
                     ),
                   ],
@@ -503,7 +508,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
                     }
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade700,
+                backgroundColor: appTheme.colors.primary,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Add to Cart'),

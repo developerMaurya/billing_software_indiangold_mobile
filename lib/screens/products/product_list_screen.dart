@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
+import '../../utils/app_theme_provider.dart';
 import 'add_edit_product_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
@@ -18,15 +20,16 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: appTheme.colors.background,
       appBar: AppBar(
         title: Text(
           widget.forSelection ? 'Select Product' : 'Products',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: appTheme.colors.secondary,
         foregroundColor: Colors.white,
         elevation: 0,
         shape: const RoundedRectangleBorder(
@@ -46,7 +49,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               },
               label: const Text('Add Product'),
               icon: const Icon(Icons.add),
-              backgroundColor: Colors.green.shade700,
+              backgroundColor: appTheme.colors.primary,
               foregroundColor: Colors.white,
             ),
       body: StreamBuilder<List<ProductModel>>(

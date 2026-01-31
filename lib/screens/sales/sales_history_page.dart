@@ -2,13 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
+import 'package:pdf/pdf.dart';
+import 'package:provider/provider.dart';
 import '../../models/sale_model.dart';
-
 import '../../models/customer_model.dart';
 import '../../services/sale_service.dart';
 import '../../services/pdf_service.dart';
-import 'package:printing/printing.dart';
-import 'package:pdf/pdf.dart';
+import '../../utils/app_theme_provider.dart';
 
 class SalesHistoryPage extends StatefulWidget {
   const SalesHistoryPage({super.key});
@@ -142,15 +143,16 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: appTheme.colors.background,
       appBar: AppBar(
         title: const Text(
           'Sales History',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: appTheme.colors.secondary,
         foregroundColor: Colors.white,
         elevation: 0,
         shape: const RoundedRectangleBorder(
@@ -302,7 +304,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                         itemCount: filteredSales.length,
                         itemBuilder: (context, index) {
                           final sale = filteredSales[index];
-                          return _buildSaleCard(sale);
+                          return _buildSaleCard(sale, appTheme);
                         },
                       ),
                     ),
@@ -316,13 +318,13 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     );
   }
 
-  Widget _buildSaleCard(SaleModel sale) {
+  Widget _buildSaleCard(SaleModel sale, AppTheme appTheme) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () => _showSaleDetails(sale),
+        onTap: () => _showSaleDetails(sale, appTheme),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -386,7 +388,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green.shade800,
+                      color: appTheme.colors.primary,
                     ),
                   ),
                 ],
@@ -398,7 +400,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     );
   }
 
-  void _showSaleDetails(SaleModel sale) {
+  void _showSaleDetails(SaleModel sale, AppTheme appTheme) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -464,7 +466,10 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.person_pin, color: Colors.green),
+                          Icon(
+                            Icons.person_pin,
+                            color: appTheme.colors.primary,
+                          ),
                           const SizedBox(width: 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -582,7 +587,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                         sale.totalAmount,
                         isBold: true,
                         fontSize: 18,
-                        color: Colors.green.shade800,
+                        color: appTheme.colors.primary,
                       ),
                     ],
                   ),
@@ -596,7 +601,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                 icon: const Icon(Icons.check),
                 label: const Text('Close'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
+                  backgroundColor: appTheme.colors.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

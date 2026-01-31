@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
 import '../../models/sale_model.dart';
 import '../../services/product_service.dart';
 import '../../services/sale_service.dart';
+import '../../utils/app_theme_provider.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -68,15 +70,16 @@ class _ReportsPageState extends State<ReportsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: appTheme.colors.background,
       appBar: AppBar(
         title: const Text(
           'Reports & Analytics',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: appTheme.colors.secondary,
         foregroundColor: Colors.white,
         elevation: 0,
         shape: const RoundedRectangleBorder(
@@ -219,21 +222,25 @@ class _ReportsPageState extends State<ReportsPage> {
                   'Sales by Product',
                   Icons.inventory,
                   _showSalesByProduct,
+                  appTheme,
                 ),
                 _buildDetailedReportButton(
                   'Sales by Date',
                   Icons.date_range,
                   _showSalesByDate,
+                  appTheme,
                 ),
                 _buildDetailedReportButton(
                   'Top Customers',
                   Icons.people,
                   _showTopCustomers,
+                  appTheme,
                 ),
                 _buildDetailedReportButton(
                   'Stock Report',
                   Icons.warehouse,
                   _showStockReport,
+                  appTheme,
                 ),
               ],
             ),
@@ -363,11 +370,12 @@ class _ReportsPageState extends State<ReportsPage> {
     String title,
     IconData icon,
     VoidCallback onTap,
+    AppTheme appTheme,
   ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: Icon(icon, color: Colors.green.shade700),
+        leading: Icon(icon, color: appTheme.colors.primary),
         title: Text(title),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: onTap,
