@@ -238,6 +238,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -247,9 +248,9 @@ class _LoginPageState extends State<LoginPage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.green.shade800,
-              Colors.green.shade500,
-              Colors.green.shade200,
+              appTheme.colors.secondary,
+              appTheme.colors.primary,
+              appTheme.colors.primary.withOpacity(0.5),
             ],
           ),
         ),
@@ -261,6 +262,7 @@ class _LoginPageState extends State<LoginPage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
+              color: appTheme.colors.cardColor,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24.0,
@@ -275,13 +277,13 @@ class _LoginPageState extends State<LoginPage> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade50,
+                          color: appTheme.colors.primary.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.health_and_safety,
                           size: 64,
-                          color: Colors.green.shade700,
+                          color: appTheme.colors.primary,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -289,7 +291,7 @@ class _LoginPageState extends State<LoginPage> {
                         'Indian Gold Health',
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                              color: Colors.green.shade900,
+                              color: appTheme.colors.headingColor,
                               fontWeight: FontWeight.bold,
                             ),
                       ),
@@ -297,7 +299,7 @@ class _LoginPageState extends State<LoginPage> {
                       Text(
                         'Login to your account',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade600,
+                          color: appTheme.colors.textColor.withOpacity(0.7),
                         ),
                       ),
                       const SizedBox(height: 40),
@@ -307,13 +309,23 @@ class _LoginPageState extends State<LoginPage> {
                         controller: _emailController,
                         decoration: InputDecoration(
                           labelText: 'Email Address',
-                          prefixIcon: const Icon(Icons.email_outlined),
+                          prefixIcon: Icon(
+                            Icons.email_outlined,
+                            color: appTheme.colors.primary,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: appTheme.colors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
                         validator: (value) {
@@ -331,12 +343,16 @@ class _LoginPageState extends State<LoginPage> {
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
                           labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
+                          prefixIcon: Icon(
+                            Icons.lock_outline,
+                            color: appTheme.colors.primary,
+                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _isPasswordVisible
                                   ? Icons.visibility_off
                                   : Icons.visibility,
+                              color: appTheme.colors.primary,
                             ),
                             onPressed: () {
                               setState(() {
@@ -350,6 +366,13 @@ class _LoginPageState extends State<LoginPage> {
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: appTheme.colors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
                         validator: (value) {
@@ -366,7 +389,10 @@ class _LoginPageState extends State<LoginPage> {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () {},
-                          child: const Text('Forgot Password?'),
+                          child: Text(
+                            'Forgot Password?',
+                            style: TextStyle(color: appTheme.colors.primary),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -378,7 +404,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade700,
+                            backgroundColor: appTheme.colors.primary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -418,9 +444,12 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               );
                             },
-                            child: const Text(
+                            child: Text(
                               'Register Now',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: appTheme.colors.primary,
+                              ),
                             ),
                           ),
                         ],

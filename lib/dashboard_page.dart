@@ -339,8 +339,12 @@ class _DashboardPageState extends State<DashboardPage>
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               backgroundImage:
-                  (companyData?['logo']?.toString().isNotEmpty ?? false)
-                  ? NetworkImage(companyData!['logo'].toString())
+                  companyData?['logo'] != null &&
+                      companyData!['logo'].toString().isNotEmpty
+                  ? (companyData!['logo'].toString().startsWith('http')
+                        ? NetworkImage(companyData!['logo'].toString())
+                        : FileImage(File(companyData!['logo'].toString()))
+                              as ImageProvider)
                   : null,
               child: (companyData?['logo']?.toString().isEmpty ?? true)
                   ? Icon(Icons.store, size: 40, color: appTheme.colors.primary)

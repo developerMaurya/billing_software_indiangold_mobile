@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart'; // Added
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
+import '../../utils/app_theme_provider.dart'; // Added
 
 class AddEditProductScreen extends StatefulWidget {
   final ProductModel? product;
@@ -226,11 +228,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: appTheme.colors.background,
       appBar: AppBar(
         title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: appTheme.colors.secondary,
         foregroundColor: Colors.white,
         actions: [
           if (widget.product != null)
@@ -266,7 +269,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                                     _imageFile != null ||
                                         (widget.product?.imageUrl != null &&
                                             !_isImageRemoved)
-                                    ? Colors.green.shade400
+                                    ? appTheme.colors.primary.withOpacity(0.5)
                                     : Colors.grey.shade400,
                                 width: 2,
                               ),
@@ -323,7 +326,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.green.shade600,
+                                color: appTheme.colors.primary,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -359,7 +362,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         child: Text(
                           'New image selected',
                           style: TextStyle(
-                            color: Colors.green.shade600,
+                            color: appTheme.colors.primary,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -369,7 +372,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              _buildSectionTitle('Product Details'),
+              _buildSectionTitle('Product Details', appTheme),
               const SizedBox(height: 16),
               Card(
                 elevation: 2,
@@ -385,6 +388,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         decoration: _inputDecoration(
                           'Product Name',
                           Icons.shopping_bag,
+                          appTheme,
                         ),
                         style: const TextStyle(
                           fontSize: 18,
@@ -399,6 +403,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         decoration: _inputDecoration(
                           'Description',
                           Icons.description,
+                          appTheme,
                         ),
                         maxLines: 3,
                         validator: (v) =>
@@ -413,6 +418,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'HSN Code',
                                 Icons.numbers,
+                                appTheme,
                               ),
                               validator: (v) =>
                                   v!.isEmpty ? 'HSN Code is required' : null,
@@ -425,6 +431,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'Batch No',
                                 Icons.batch_prediction,
+                                appTheme,
                               ),
                             ),
                           ),
@@ -439,6 +446,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'Category',
                                 Icons.category,
+                                appTheme,
                               ),
                               validator: (v) =>
                                   v!.isEmpty ? 'Category is required' : null,
@@ -463,6 +471,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                                   decoration: _inputDecoration(
                                     'Expire Date',
                                     Icons.calendar_today,
+                                    appTheme,
                                   ),
                                   controller: TextEditingController(
                                     text: _expireDate != null
@@ -481,7 +490,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ),
 
               const SizedBox(height: 24),
-              _buildSectionTitle('Form & Unit Info (Optional)'),
+              _buildSectionTitle('Form & Unit Info (Optional)', appTheme),
               const SizedBox(height: 16),
               Card(
                 elevation: 2,
@@ -501,6 +510,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'Product Form',
                                 Icons.medication,
+                                appTheme,
                               ),
                               items: _productTypes.map((type) {
                                 return DropdownMenuItem(
@@ -522,6 +532,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'Size/Vol (e.g. 100ml)',
                                 Icons.scale,
+                                appTheme,
                               ),
                             ),
                           ),
@@ -533,7 +544,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ),
 
               const SizedBox(height: 24),
-              _buildSectionTitle('Pricing & Inventory'),
+              _buildSectionTitle('Pricing & Inventory', appTheme),
               const SizedBox(height: 16),
 
               Card(
@@ -554,6 +565,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'Buy Rate',
                                 Icons.currency_rupee,
+                                appTheme,
                               ),
                               keyboardType: TextInputType.number,
                               validator: (v) => v!.isEmpty ? 'Required' : null,
@@ -566,6 +578,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'MRP',
                                 Icons.price_check,
+                                appTheme,
                               ),
                               keyboardType: TextInputType.number,
                               validator: (v) => v!.isEmpty ? 'Required' : null,
@@ -584,6 +597,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'Selling/Given Rate',
                                 Icons.sell,
+                                appTheme,
                               ),
                               keyboardType: TextInputType.number,
                               validator: (v) => v!.isEmpty ? 'Required' : null,
@@ -596,6 +610,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               decoration: _inputDecoration(
                                 'Quantity',
                                 Icons.inventory,
+                                appTheme,
                               ),
                               keyboardType: TextInputType.number,
                               validator: (v) => v!.isEmpty ? 'Required' : null,
@@ -613,7 +628,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveProduct,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
+                    backgroundColor: appTheme.colors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -639,10 +654,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(
+    String label,
+    IconData icon,
+    AppTheme appTheme,
+  ) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: Colors.green.shade700),
+      prefixIcon: Icon(icon, color: appTheme.colors.primary),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -650,20 +669,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.green.shade700, width: 2),
+        borderSide: BorderSide(color: appTheme.colors.primary, width: 2),
       ),
       filled: true,
       fillColor: Colors.white,
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, AppTheme appTheme) {
     return Text(
       title,
       style: TextStyle(
         fontSize: 16, // Slightly smaller
         fontWeight: FontWeight.bold,
-        color: Colors.green.shade900,
+        color: appTheme.colors.headingColor,
       ),
     );
   }

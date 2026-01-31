@@ -7,7 +7,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'utils/app_theme_provider.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -28,7 +31,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final _passwordController = TextEditingController();
 
   File? _logoImage;
-  List<File> _bannerImages = [];
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
@@ -55,15 +57,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
     }
   }
 
-  Future<void> _pickBanners() async {
-    final List<XFile> images = await _picker.pickMultiImage();
-    if (images.isNotEmpty) {
-      setState(() {
-        _bannerImages.addAll(images.map((xFile) => File(xFile.path)));
-      });
-    }
-  }
-
   // Encryption for redundant DB storage as requested
   String _encryptPassword(String password) {
     var bytes = utf8.encode(password);
@@ -84,11 +77,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   String _statusMessage = 'Please wait...';
 
-  Future<void> _saveShopData(
-    String uid,
-    String? logoUrl,
-    List<String> bannerUrls,
-  ) async {
+  Future<void> _saveShopData(String uid, String? logoUrl) async {
     setState(() => _statusMessage = 'Saving shop details...');
     String encryptedPassword = _encryptPassword(_passwordController.text);
 
@@ -105,7 +94,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             'mobile': _mobileController.text.trim(),
             'email': _emailController.text.trim(),
             'logo': logoUrl,
-            'banners': bannerUrls,
+            'banners': [], // Removed banners
             'createdAt': FieldValue.serverTimestamp(),
             'uid': uid,
             'encrypted_password_storage': encryptedPassword,
@@ -219,7 +208,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
       UserCredential? userCredential;
       String? logoUrl;
-      List<String> bannerUrls = [];
 
       try {
         // 1. Create User in Firebase Auth
@@ -245,25 +233,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
           }
         }
 
-        // 3. Upload Banners
-        if (_bannerImages.isNotEmpty) {
-          setState(() => _statusMessage = 'Uploading banners...');
-          for (var i = 0; i < _bannerImages.length; i++) {
-            try {
-              String ext = _bannerImages[i].path.split('.').last;
-              String? url = await _uploadImage(
-                _bannerImages[i],
-                'shops/$uid/banners/${DateTime.now().millisecondsSinceEpoch}_$i.$ext',
-              );
-              if (url != null) {
-                bannerUrls.add(url);
-              }
-            } catch (e) {
-              debugPrint("Banner $i upload failed: $e");
-            }
-          }
-        }
-
         // Log Data for Debugging as requested
         print("--------------------------------------------------");
         print("          SUBMITTING REGISTRATION DATA            ");
@@ -277,11 +246,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
         print("Mobile: ${_mobileController.text.trim()}");
         print("Email: ${_emailController.text.trim()}");
         print("Logo URL: $logoUrl");
-        print("Banner URLs: $bannerUrls");
+        print("Banners: [] (Removed)");
         print("--------------------------------------------------");
 
         // 4. Save Data to Firestore
-        await _saveShopData(uid, logoUrl, bannerUrls);
+        await _saveShopData(uid, logoUrl);
       } on FirebaseAuthException catch (e) {
         String message = "Registration failed: ${e.message} (${e.code})";
 
@@ -299,11 +268,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
             );
             User? user = FirebaseAuth.instance.currentUser;
             if (user != null) {
-              // We need to upload images again if they haven't been uploaded because the flow was interrupted?
-              // For simplicity, we assume if we are here, we might need to re-upload or just save data.
-              // Note: This duplicates upload logic if we strictly follow the flow, but usually images are keyed by timestamp so it's fine.
-              // Ideally we should extract upload logic too, but let's keep it simple for this fix.
-
               // Re-run upload logic quickly
               String uid = user.uid;
               if (_logoImage != null) {
@@ -314,21 +278,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   'shops/$uid/logo/${DateTime.now().millisecondsSinceEpoch}.$ext',
                 );
               }
-              if (_bannerImages.isNotEmpty) {
-                setState(() => _statusMessage = 'Uploading banners...');
-                for (var i = 0; i < _bannerImages.length; i++) {
-                  String ext = _bannerImages[i].path.split('.').last;
-                  String? url = await _uploadImage(
-                    _bannerImages[i],
-                    'shops/$uid/banners/${DateTime.now().millisecondsSinceEpoch}_$i.$ext',
-                  );
-                  if (url != null) {
-                    bannerUrls.add(url);
-                  }
-                }
-              }
 
-              await _saveShopData(user.uid, logoUrl, bannerUrls);
+              await _saveShopData(user.uid, logoUrl);
               return;
             }
           } catch (loginErr) {
@@ -347,7 +298,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
             await FirebaseAuth.instance.signInAnonymously();
             User? user = FirebaseAuth.instance.currentUser;
             if (user != null) {
-              // We need to upload images again if anon login worked (since we skipped it)
               // Re-run upload logic quickly
               String uid = user.uid;
               if (_logoImage != null) {
@@ -358,21 +308,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   'shops/$uid/logo/${DateTime.now().millisecondsSinceEpoch}.$ext',
                 );
               }
-              if (_bannerImages.isNotEmpty) {
-                setState(() => _statusMessage = 'Uploading banners...');
-                for (var i = 0; i < _bannerImages.length; i++) {
-                  String ext = _bannerImages[i].path.split('.').last;
-                  String? url = await _uploadImage(
-                    _bannerImages[i],
-                    'shops/$uid/banners/${DateTime.now().millisecondsSinceEpoch}_$i.$ext',
-                  );
-                  if (url != null) {
-                    bannerUrls.add(url);
-                  }
-                }
-              }
 
-              await _saveShopData(user.uid, logoUrl, bannerUrls);
+              await _saveShopData(user.uid, logoUrl);
               return;
             }
           } catch (anonError) {
@@ -383,7 +320,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             String pseudoUid =
                 'test_user_${DateTime.now().millisecondsSinceEpoch}';
             try {
-              await _saveShopData(pseudoUid, logoUrl, bannerUrls);
+              await _saveShopData(pseudoUid, logoUrl);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -459,10 +396,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = Provider.of<AppTheme>(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Register Company/Shop'),
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: appTheme.colors.secondary,
         foregroundColor: Colors.white,
       ),
       body: Stack(
@@ -473,7 +411,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.green.shade50, Colors.white],
+                colors: [appTheme.colors.background, Colors.white],
               ),
             ),
             child: SingleChildScrollView(
@@ -483,12 +421,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildSectionTitle('Basic Details'),
+                    _buildSectionTitle('Basic Details', appTheme),
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _nameController,
                       label: 'Company / Shop Name',
                       icon: Icons.store,
+                      appTheme: appTheme,
                       validator: (v) =>
                           v?.isEmpty == true ? 'Please enter name' : null,
                     ),
@@ -497,15 +436,17 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       controller: _aboutController,
                       label: 'About',
                       icon: Icons.info_outline,
+                      appTheme: appTheme,
                       maxLines: 3,
                     ),
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Contact & Address'),
+                    _buildSectionTitle('Contact & Address', appTheme),
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _addressController,
                       label: 'Address',
                       icon: Icons.location_on_outlined,
+                      appTheme: appTheme,
                       maxLines: 2,
                       validator: (v) =>
                           v?.isEmpty == true ? 'Please enter address' : null,
@@ -518,6 +459,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                             controller: _pinCodeController,
                             label: 'Pin Code',
                             icon: Icons.pin_drop_outlined,
+                            appTheme: appTheme,
                             keyboardType: TextInputType.number,
                             validator: (v) =>
                                 v?.isEmpty == true ? 'Required' : null,
@@ -529,6 +471,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                             controller: _gstController,
                             label: 'GST Number',
                             icon: Icons.receipt_long_outlined,
+                            appTheme: appTheme,
                           ),
                         ),
                       ],
@@ -538,6 +481,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       controller: _mobileController,
                       label: 'Mobile Number',
                       icon: Icons.phone_android,
+                      appTheme: appTheme,
                       keyboardType: TextInputType.phone,
                       validator: (v) => v?.isEmpty == true
                           ? 'Please enter mobile number'
@@ -548,24 +492,29 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       controller: _emailController,
                       label: 'Email Address',
                       icon: Icons.email_outlined,
+                      appTheme: appTheme,
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) =>
                           v?.isEmpty == true ? 'Please enter email' : null,
                     ),
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Security'),
+                    _buildSectionTitle('Security', appTheme),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: !_isPasswordVisible,
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        prefixIcon: Icon(
+                          Icons.lock_outline,
+                          color: appTheme.colors.primary,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _isPasswordVisible
                                 ? Icons.visibility_off
                                 : Icons.visibility,
+                            color: appTheme.colors.primary,
                           ),
                           onPressed: () {
                             setState(() {
@@ -575,6 +524,17 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: appTheme.colors.primary,
+                            width: 2,
+                          ),
                         ),
                         filled: true,
                         fillColor: Colors.white,
@@ -590,13 +550,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Branding'),
+                    _buildSectionTitle('Branding', appTheme),
                     const SizedBox(height: 16),
                     ListTile(
-                      leading: const Icon(
+                      leading: Icon(
                         Icons.image,
                         size: 40,
-                        color: Colors.green,
+                        color: appTheme.colors.primary,
                       ),
                       title: const Text('Company Logo'),
                       subtitle: Text(
@@ -619,58 +579,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       ),
                       tileColor: Colors.white,
                     ),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.photo_library,
-                        size: 40,
-                        color: Colors.green,
-                      ),
-                      title: const Text('Banner Images'),
-                      subtitle: Text(
-                        _bannerImages.isNotEmpty
-                            ? '${_bannerImages.length} images selected'
-                            : 'Tap to select banners',
-                      ),
-                      onTap: _pickBanners,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      tileColor: Colors.white,
-                    ),
-                    if (_bannerImages.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: SizedBox(
-                          height: 80,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _bannerImages.length,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(
-                                    _bannerImages[index],
-                                    width: 80,
-                                    height: 80,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
+
                     const SizedBox(height: 40),
                     SizedBox(
                       height: 50,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _register,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
+                          backgroundColor: appTheme.colors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -718,13 +634,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, AppTheme appTheme) {
     return Text(
       title,
       style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        color: Colors.green.shade800,
+        color: appTheme.colors.primary,
       ),
     );
   }
@@ -733,6 +649,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    required AppTheme appTheme,
     TextInputType? keyboardType,
     int maxLines = 1,
     String? Function(String?)? validator,
@@ -743,11 +660,15 @@ class _RegistrationPageState extends State<RegistrationPage> {
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon),
+        prefixIcon: Icon(icon, color: appTheme.colors.primary),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: appTheme.colors.primary, width: 2),
         ),
         filled: true,
         fillColor: Colors.white,
