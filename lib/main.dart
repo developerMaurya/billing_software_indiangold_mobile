@@ -428,6 +428,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Register Link
                       
+                      
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
