@@ -687,6 +687,100 @@ class _BillGenerationScreenState extends State<BillGenerationScreen> {
       ),
     );
 
+    final hsnSummary = <String, Map<String, dynamic>>{};
+    for (final item in sale.items) {
+      final hsn = item.hsnCode;
+      final qty = item.quantity;
+      final taxable = item.amount;
+      final gst = sale.isInclusiveGst
+          ? taxable - (taxable / (1 + sale.gstPercent / 100))
+          : taxable * (sale.gstPercent / 100);
+      final cgst = gst / 2;
+      final sgst = gst / 2;
+      final totalWithGst = taxable + cgst + sgst;
+
+      final existing = hsnSummary[hsn];
+      if (existing == null) {
+        hsnSummary[hsn] = {
+          'hsn': hsn,
+          'taxable': taxable,
+          'qty': qty,
+          'cgst': cgst,
+          'sgst': sgst,
+          'totalWithGst': totalWithGst,
+          'billNo': sale.billNumber ?? '',
+        };
+      } else {
+        existing['taxable'] = (existing['taxable'] as double) + taxable;
+        existing['qty'] = (existing['qty'] as int) + qty;
+        existing['cgst'] = (existing['cgst'] as double) + cgst;
+        existing['sgst'] = (existing['sgst'] as double) + sgst;
+        existing['totalWithGst'] = (existing['totalWithGst'] as double) + totalWithGst;
+      }
+    }
+
+    final hsnRows = hsnSummary.values.toList();
+    double hsnTaxableTotal = 0;
+    int hsnQtyTotal = 0;
+    double hsnCgstTotal = 0;
+    double hsnSgstTotal = 0;
+    double hsnTotalWithGst = 0;
+
+    for (final hsn in hsnRows) {
+      hsnTaxableTotal += hsn['taxable'] as double;
+      hsnQtyTotal += hsn['qty'] as int;
+      hsnCgstTotal += hsn['cgst'] as double;
+      hsnSgstTotal += hsn['sgst'] as double;
+      hsnTotalWithGst += hsn['totalWithGst'] as double;
+    }
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('HSN Summary', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Table.fromTextArray(
+                headers: ['HSN Code', 'Taxable', 'Qty', 'CGST', 'SGST', 'Total w/ GST', 'Bill No'],
+                data: hsnRows
+                    .map(
+                      (hsn) => [
+                        hsn['hsn'],
+                        '₹${(hsn['taxable'] as double).toStringAsFixed(2)}',
+                        (hsn['qty'] as int).toString(),
+                        '₹${(hsn['cgst'] as double).toStringAsFixed(2)}',
+                        '₹${(hsn['sgst'] as double).toStringAsFixed(2)}',
+                        '₹${(hsn['totalWithGst'] as double).toStringAsFixed(2)}',
+                        hsn['billNo'],
+                      ],
+                    )
+                    .toList(),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text('Totals', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Taxable Total: ₹${hsnTaxableTotal.toStringAsFixed(2)}'),
+                  pw.Text('Qty Total: $hsnQtyTotal'),
+                ],
+              ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('CGST Total: ₹${hsnCgstTotal.toStringAsFixed(2)}'),
+                  pw.Text('SGST Total: ₹${hsnSgstTotal.toStringAsFixed(2)}'),
+                ],
+              ),
+              pw.Text('Total w/ GST: ₹${hsnTotalWithGst.toStringAsFixed(2)}'),
+            ],
+          );
+        },
+      ),
+    );
+
     return pdf;
   }
 }

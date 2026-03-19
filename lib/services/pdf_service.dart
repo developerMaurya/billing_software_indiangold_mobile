@@ -454,6 +454,171 @@ class PdfService {
       ),
     );
 
+    // Add HSN summary page
+    final hsnSummary = <String, Map<String, dynamic>>{};
+    for (final item in sale.items) {
+      final hsn = item.hsnCode;
+      final amount = item.amount;
+      final gst = (sale.gstPercent / 100) * amount;
+      final cgst = gst / 2;
+      final sgst = gst / 2;
+      final totalWithGst = amount + cgst + sgst;
+
+      if (!hsnSummary.containsKey(hsn)) {
+        hsnSummary[hsn] = {
+          'hsn': hsn,
+          'taxable': amount,
+          'qty': item.quantity,
+          'cgst': cgst,
+          'sgst': sgst,
+          'totalWithGst': totalWithGst,
+          'billNo': sale.billNumber ?? '',
+        };
+      } else {
+        hsnSummary[hsn]!['taxable'] += amount;
+        hsnSummary[hsn]!['qty'] += item.quantity;
+        hsnSummary[hsn]!['cgst'] += cgst;
+        hsnSummary[hsn]!['sgst'] += sgst;
+        hsnSummary[hsn]!['totalWithGst'] += totalWithGst;
+      }
+    }
+
+    final hsnRows = hsnSummary.values.toList();
+    double totalTaxable = 0;
+    int totalQty = 0;
+    double totalCgst = 0;
+    double totalSgst = 0;
+    double totalWithGst = 0;
+    for (final row in hsnRows) {
+      totalTaxable += row['taxable'] as double;
+      totalQty += row['qty'] as int;
+      totalCgst += row['cgst'] as double;
+      totalSgst += row['sgst'] as double;
+      totalWithGst += row['totalWithGst'] as double;
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(16),
+        build: (pw.Context context) {
+          return [
+            // Header company + bill info + customer
+            pw.Text(
+              companyData?['name'] ?? 'Company Name',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+              textAlign: pw.TextAlign.center,
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text('${companyData?['address'] ?? ''}, ${companyData?['city'] ?? ''}', textAlign: pw.TextAlign.center),
+            pw.Text('${companyData?['state'] ?? ''} - ${companyData?['pinCode'] ?? ''}', textAlign: pw.TextAlign.center),
+            pw.Text('Phone: ${companyData?['phone'] ?? ''} | GST: ${companyData?['gst'] ?? ''}', textAlign: pw.TextAlign.center),
+            pw.Divider(),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Bill No: ${sale.billNumber ?? 'Preview'}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                pw.Text('Date: ${DateFormat('dd-MM-yyyy HH:mm').format(sale.saleDate)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
+            pw.SizedBox(height: 8),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Bill To:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text(customer.name),
+                      pw.Text('${customer.address}, ${customer.city ?? ''}'),
+                      pw.Text('Mobile: ${customer.mobile}'),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 12),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Ship To:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text(customer.name),
+                      pw.Text('${customer.address}, ${customer.city ?? ''}'),
+                      pw.Text('Mobile: ${customer.mobile}'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 16),
+            pw.Text('HSN Summary', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Table.fromTextArray(
+              headers: ['HSN Code', 'Taxable', 'Qty', 'CGST', 'SGST', 'Total w/ GST', 'Bill No'],
+              data: hsnRows.map((row) {
+                return [
+                  row['hsn'],
+                  '₹${(row['taxable'] as double).toStringAsFixed(2)}',
+                  row['qty'].toString(),
+                  '₹${(row['cgst'] as double).toStringAsFixed(2)}',
+                  '₹${(row['sgst'] as double).toStringAsFixed(2)}',
+                  '₹${(row['totalWithGst'] as double).toStringAsFixed(2)}',
+                  row['billNo'],
+                ];
+              }).toList(),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text('HSN Totals (row in table below)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 4),
+            pw.Table.fromTextArray(
+              headers: ['HSN Code', 'Taxable', 'Qty', 'CGST', 'SGST', 'Total w/ GST', 'Bill No'],
+              data: [
+                [
+                  'TOTAL',
+                  '₹${totalTaxable.toStringAsFixed(2)}',
+                  totalQty.toString(),
+                  '₹${totalCgst.toStringAsFixed(2)}',
+                  '₹${totalSgst.toStringAsFixed(2)}',
+                  '₹${totalWithGst.toStringAsFixed(2)}',
+                  '',
+                ],
+              ],
+            ),
+            pw.SizedBox(height: 16),
+            pw.Text('HSN Summary Totals', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Container(
+              decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey)),
+              padding: const pw.EdgeInsets.all(8),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('Taxable Total: ₹${totalTaxable.toStringAsFixed(2)}'),
+                  pw.Text('Qty Total: $totalQty'),
+                  pw.Text('CGST Total: ₹${totalCgst.toStringAsFixed(2)}'),
+                  pw.Text('SGST Total: ₹${totalSgst.toStringAsFixed(2)}'),
+                  pw.Text('Total w/ GST: ₹${totalWithGst.toStringAsFixed(2)}'),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Align(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text('Authorized Signatory', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 30),
+                  pw.Container(height: 1, width: 180, color: PdfColors.black),
+                  pw.Text('${companyData?['name'] ?? 'Company Name'}', style: pw.TextStyle(fontSize: 10)),
+                ],
+              ),
+            ),
+          ];
+        },
+      ),
+    );
+
     return pdf;
   }
 }
