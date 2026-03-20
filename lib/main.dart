@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,14 +12,42 @@ import 'registration_page.dart';
 import 'package:provider/provider.dart';
 import 'utils/app_theme_provider.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(const MyApp());
+
+  bool firebaseInitialized = false;
+  String? firebaseInitError;
+
+  try {
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'YOUR_API_KEY',
+          authDomain: 'YOUR_AUTH_DOMAIN',
+          projectId: 'YOUR_PROJECT_ID',
+          storageBucket: 'YOUR_STORAGE_BUCKET',
+          messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
+          appId: 'YOUR_APP_ID',
+          measurementId: 'YOUR_MEASUREMENT_ID',
+        ),
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
+    firebaseInitialized = true;
+  } catch (e) {
+    firebaseInitError = e.toString();
+    debugPrint('Firebase initialization failed: $e');
+  }
+
+  runApp(MyApp(firebaseInitialized: firebaseInitialized, firebaseInitError: firebaseInitError));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool firebaseInitialized;
+  final String? firebaseInitError;
+
+  const MyApp({super.key, required this.firebaseInitialized, this.firebaseInitError});
 
   // This widget is the root of your application.
   @override
@@ -51,20 +80,38 @@ class MyApp extends StatelessWidget {
               ),
               useMaterial3: true,
             ),
-            home: StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.authStateChanges(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (snapshot.hasData) {
-                  return const DashboardPage();
-                }
-                return const LoginPage();
-              },
-            ),
+            home: firebaseInitialized
+                ? StreamBuilder<User?>(
+                    stream: FirebaseAuth.instance.authStateChanges(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(
+                          body: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      if (snapshot.hasData) {
+                        return const DashboardPage();
+                      }
+                      return const LoginPage();
+                    },
+                  )
+                : Scaffold(
+                    appBar: AppBar(title: const Text('Initialization Error')),
+                    body: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text('Firebase failed to initialize.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          Text(firebaseInitError ?? 'Missing Firebase settings.', style: const TextStyle(color: Colors.red)),
+                          const SizedBox(height: 16),
+                          const Text('Set your Firebase web config in main.dart and restart.'),
+                        ],
+                      ),
+                    ),
+                  ),
           );
         },
       ),

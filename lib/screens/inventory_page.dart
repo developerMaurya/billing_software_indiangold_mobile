@@ -406,14 +406,16 @@ class _InventoryPageState extends State<InventoryPage> {
                     borderRadius: BorderRadius.circular(8),
                     image: product.imageUrl != null
                         ? (product.imageUrl!.startsWith('http')
-                              ? DecorationImage(
-                                  image: NetworkImage(product.imageUrl!),
-                                  fit: BoxFit.cover,
-                                )
-                              : DecorationImage(
-                                  image: FileImage(File(product.imageUrl!)),
-                                  fit: BoxFit.cover,
-                                ))
+                            ? DecorationImage(
+                                image: NetworkImage(product.imageUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : File(product.imageUrl!).existsSync()
+                                ? DecorationImage(
+                                    image: FileImage(File(product.imageUrl!)),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null)
                         : null,
                   ),
                   child: product.imageUrl == null

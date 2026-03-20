@@ -319,12 +319,15 @@ class _BillGenerationScreenState extends State<BillGenerationScreen> {
 
       final saleService = SaleService();
       final saleId = await saleService.createSale(sale);
+      debugPrint('Sale created with id: $saleId and ${sale.items.length} items');
 
       // Update product quantities in inventory
       await _updateProductQuantities();
 
       // Generate PDF
+      debugPrint('Generating PDF for sale ${sale.billNumber}...');
       final pdf = await _generatePdf(sale);
+      debugPrint('PDF generation complete. Starting layout preview...');
 
       // Show PDF preview
       await Printing.layoutPdf(
@@ -386,307 +389,151 @@ class _BillGenerationScreenState extends State<BillGenerationScreen> {
     }
   }
 
+  pw.Widget _buildBillHeader(SaleModel sale, String copyLabel) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(widget.companyData?['name'] ?? 'Company Name', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.Text(widget.companyData?['address'] ?? ''),
+                if (widget.companyData?['pinCode'] != null) pw.Text('Pincode: ${widget.companyData!['pinCode']}'),
+                pw.Text('Phone: ${widget.companyData?['mobile'] ?? ''} | GST: ${widget.companyData?['gst'] ?? ''}'),
+                pw.Text('State: Maharashtra | Country: India'),
+              ],
+            ),
+            pw.Container(
+              padding: pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: pw.BoxDecoration( border: pw.Border.all(color: PdfColors.grey), borderRadius: pw.BorderRadius.circular(4)),
+              child: pw.Text(copyLabel, style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 8),
+        pw.Text('Bill No: ${sale.billNumber} | Date: ${sale.saleDate.toString().split(' ')[0]}'),
+        pw.Text('Bill To: ${sale.customerName} | Mobile: ${sale.customerMobile} | Address: ${widget.customer.address}'),
+        if (widget.customer.pinCode != null) pw.Text('Pincode: ${widget.customer.pinCode}'),
+        pw.Text('Status: ${widget.customer.status} | Country: ${widget.customer.country}'),
+        pw.SizedBox(height: 8),
+        pw.Divider(),
+      ],
+    );
+  }
+
+  pw.Widget _buildBillBody(SaleModel sale) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Table.fromTextArray(
+          headers: ['Item', 'HSN', 'Qty', 'MRP', 'Rate', 'Amount'],
+          data: sale.items
+              .map((item) => [
+                    item.productName,
+                    item.hsnCode,
+                    item.quantity.toString(),
+                    '₹${item.mrp.toStringAsFixed(2)}',
+                    '₹${item.rate.toStringAsFixed(2)}',
+                    '₹${item.amount.toStringAsFixed(2)}',
+                  ])
+              .toList(),
+        ),
+        pw.SizedBox(height: 6),
+        pw.Container(
+          padding: pw.EdgeInsets.all(8),
+          decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.green), borderRadius: pw.BorderRadius.circular(4)),
+          child: pw.Column(
+            children: [
+              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Subtotal:'), pw.Text('₹${sale.subtotal.toStringAsFixed(2)}')]),
+              if (sale.discountPercent > 0)
+                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Discount (${sale.discountPercent}%):', style: pw.TextStyle(color: PdfColors.red)), pw.Text('-₹${(sale.subtotal * sale.discountPercent / 100).toStringAsFixed(2)}', style: pw.TextStyle(color: PdfColors.red))]),
+              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Taxable Amount:'), pw.Text('₹${(sale.subtotal - (sale.subtotal * sale.discountPercent / 100)).toStringAsFixed(2)}')]),
+              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('IGST (${sale.gstPercent}%):'), pw.Text('₹${sale.gstAmount.toStringAsFixed(2)}')]),
+              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('UGST (2.5% Sharing):'), pw.Text('₹${(sale.gstAmount * 0.025).toStringAsFixed(2)}')]),
+              pw.Divider(),
+              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Total Amount:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)), pw.Text('₹${sale.totalAmount.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.green))]),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Container(
+          padding: pw.EdgeInsets.all(8),
+          decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey), borderRadius: pw.BorderRadius.circular(4)),
+          child: pw.Column(children: [
+            pw.Text('Authorization / प्राधिकरण', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 5),
+            pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+              pw.Column(children: [pw.Text('Customer Signature', style: pw.TextStyle(fontSize: 10)), pw.SizedBox(height: 20), pw.Container(height: 1, width: 80, color: PdfColors.black)]),
+              pw.Column(children: [pw.Text('Authorized Signatory', style: pw.TextStyle(fontSize: 10)), pw.SizedBox(height: 20), pw.Container(height: 1, width: 80, color: PdfColors.black)]),
+            ]),
+          ]),
+        ),
+      ],
+    );
+  }
+
   Future<pw.Document> _generatePdf(SaleModel sale) async {
     final pdf = pw.Document();
 
+    pw.Widget buildPage(String copyLabel) {
+      debugPrint('Adding PDF page for: $copyLabel');
+      return pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            padding: pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey300,
+              borderRadius: pw.BorderRadius.circular(4),
+            ),
+            child: pw.Text(copyLabel, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+          ),
+          pw.SizedBox(height: 8),
+          _buildBillHeader(sale, copyLabel),
+          _buildBillBody(sale),
+        ],
+      );
+    }
+
+    debugPrint('Adding first page (Original Copy)');
     pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              // Company Header
-              pw.Text(
-                widget.companyData?['name'] ?? 'Company Name',
-                style: pw.TextStyle(
-                  fontSize: 28,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-                textAlign: pw.TextAlign.center,
-              ),
-              pw.SizedBox(height: 8),
-              pw.Text(
-                widget.companyData?['address'] ?? '',
-                textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              if (widget.companyData?['pinCode'] != null) ...[
-                pw.Text('Pincode: ${widget.companyData!['pinCode']}'),
-              ],
-              pw.Text(
-                'Phone: ${widget.companyData?['mobile'] ?? ''} | GST: ${widget.companyData?['gst'] ?? ''}',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              pw.Text('State: Maharashtra | Country: India'),
-              pw.SizedBox(height: 16),
-
-              // Bill Info
-              pw.Text('Bill No: ${sale.billNumber}'),
-              pw.Text('Date: ${sale.saleDate.toString().split(' ')[0]}'),
-              pw.SizedBox(height: 16),
-
-              // Customer Details
-              pw.Text(
-                'Bill To / ग्राहक विवरण',
-                style: pw.TextStyle(
-                  fontSize: 16,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              pw.Text(
-                'Name: ${sale.customerName}',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              pw.Text(
-                'Mobile: ${sale.customerMobile} | Address: ${widget.customer.address}',
-              ),
-              if (widget.customer.pinCode != null) ...[
-                pw.Text('Pincode: ${widget.customer.pinCode}'),
-              ],
-              pw.Text(
-                'Status: ${widget.customer.status} | Country: ${widget.customer.country}',
-              ),
-              pw.Text('GST No: Not Applicable'),
-              pw.SizedBox(height: 16),
-
-              // Items Table
-              pw.Table.fromTextArray(
-                headers: ['Item', 'HSN', 'Qty', 'MRP', 'Rate', 'Amount'],
-                data: sale.items
-                    .map(
-                      (item) => [
-                        item.productName,
-                        item.hsnCode,
-                        item.quantity.toString(),
-                        '₹${item.mrp.toStringAsFixed(2)}',
-                        '₹${item.rate.toStringAsFixed(2)}',
-                        '₹${item.amount.toStringAsFixed(2)}',
-                      ],
-                    )
-                    .toList(),
-              ),
-              pw.SizedBox(height: 16),
-
-              // Totals
-              pw.Container(
-                padding: pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.green),
-                  borderRadius: pw.BorderRadius.circular(8),
-                ),
-                child: pw.Column(
-                  children: [
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          'Subtotal:',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        ),
-                        pw.Text('₹${sale.subtotal.toStringAsFixed(2)}'),
-                      ],
-                    ),
-                    if (sale.discountPercent > 0) ...[
-                      pw.SizedBox(height: 4),
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                            'Discount (${sale.discountPercent}%):',
-                            style: pw.TextStyle(color: PdfColors.red),
-                          ),
-                          pw.Text(
-                            '-₹${(sale.subtotal * sale.discountPercent / 100).toStringAsFixed(2)}',
-                            style: pw.TextStyle(color: PdfColors.red),
-                          ),
-                        ],
-                      ),
-                    ],
-                    pw.SizedBox(height: 4),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          'Taxable Amount:',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        ),
-                        pw.Text(
-                          '₹${(sale.subtotal - (sale.subtotal * sale.discountPercent / 100)).toStringAsFixed(2)}',
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(height: 4),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          'IGST (${sale.gstPercent}%):',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        ),
-                        pw.Text('₹${sale.gstAmount.toStringAsFixed(2)}'),
-                      ],
-                    ),
-                    pw.SizedBox(height: 4),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          'UGST (2.5% Sharing):',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        ),
-                        pw.Text(
-                          '₹${(sale.gstAmount * 0.025).toStringAsFixed(2)}',
-                        ),
-                      ],
-                    ),
-                    pw.Divider(),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          'Total Amount:',
-                          style: pw.TextStyle(
-                            fontSize: 16,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.Text(
-                          '₹${sale.totalAmount.toStringAsFixed(2)}',
-                          style: pw.TextStyle(
-                            fontSize: 16,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(height: 12),
-                    pw.Container(
-                      padding: pw.EdgeInsets.all(8),
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.amber100,
-                        borderRadius: pw.BorderRadius.circular(4),
-                      ),
-                      child: pw.Column(
-                        children: [
-                          pw.Text(
-                            'राशि देय / Amount Payable',
-                            style: pw.TextStyle(
-                              fontSize: 14,
-                              fontWeight: pw.FontWeight.bold,
-                            ),
-                            textAlign: pw.TextAlign.center,
-                          ),
-                          pw.Text(
-                            '₹${sale.totalAmount.toStringAsFixed(2)}',
-                            style: pw.TextStyle(
-                              fontSize: 16,
-                              fontWeight: pw.FontWeight.bold,
-                              color: PdfColors.green,
-                            ),
-                          ),
-                          pw.Text(
-                            'कुल भुगतान राशि / Total Paid Amount: ₹0.00',
-                            style: pw.TextStyle(
-                              fontSize: 12,
-                              fontStyle: pw.FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              pw.SizedBox(height: 20),
-
-              // Authorization
-              pw.Container(
-                padding: pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey),
-                  borderRadius: pw.BorderRadius.circular(8),
-                ),
-                child: pw.Column(
-                  children: [
-                    pw.Text(
-                      'Authorization / प्राधिकरण',
-                      style: pw.TextStyle(
-                        fontSize: 14,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                    pw.SizedBox(height: 20),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Expanded(
-                          child: pw.Column(
-                            children: [
-                              pw.Text(
-                                'Customer Signature',
-                                style: pw.TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                              ),
-                              pw.SizedBox(height: 30),
-                              pw.Container(height: 1, color: PdfColors.black),
-                              pw.Text(
-                                'हस्ताक्षर',
-                                style: pw.TextStyle(
-                                  fontSize: 10,
-                                  fontStyle: pw.FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        pw.Expanded(
-                          child: pw.Column(
-                            children: [
-                              pw.Text(
-                                'Authorized Signatory',
-                                style: pw.TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                              ),
-                              pw.SizedBox(height: 4),
-                              pw.Text(
-                                widget.companyData?['name'] ?? 'Company Name',
-                                style: pw.TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                              pw.SizedBox(height: 15),
-                              pw.Container(height: 1, color: PdfColors.black),
-                              pw.Text(
-                                'हस्ताक्षर',
-                                style: pw.TextStyle(
-                                  fontSize: 10,
-                                  fontStyle: pw.FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.all(12),
+        footer: (pw.Context context) {
+          return pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.end,
+            children: [pw.Text('Page ${context.pageNumber} of ${context.pagesCount}')],
           );
         },
+        build: (pw.Context context) => [
+          buildPage('ORIGINAL COPY'),
+        ],
       ),
     );
 
+    debugPrint('Adding second page (Duplicate Copy)');
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.all(12),
+        footer: (pw.Context context) {
+          return pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.end,
+            children: [pw.Text('Page ${context.pageNumber} of ${context.pagesCount}')],
+          );
+        },
+        build: (pw.Context context) => [
+          buildPage('DUPLICATE COPY'),
+        ],
+      ),
+    );
+
+    debugPrint('PDF generation complete with duplicate page added');
     return pdf;
   }
 }
+

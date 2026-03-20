@@ -387,23 +387,21 @@ class _SalesScreenState extends State<SalesScreen> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   child: ListTile(
                                     leading: item['product'].imageUrl != null
-                                        ? (item['product'].imageUrl!.startsWith(
-                                                'http',
+                                        ? (item['product'].imageUrl!.startsWith('http')
+                                            ? Image.network(
+                                                item['product'].imageUrl!,
+                                                width: 40,
+                                                height: 40,
+                                                fit: BoxFit.cover,
                                               )
-                                              ? Image.network(
-                                                  item['product'].imageUrl!,
-                                                  width: 40,
-                                                  height: 40,
-                                                  fit: BoxFit.cover,
-                                                )
-                                              : Image.file(
-                                                  File(
-                                                    item['product'].imageUrl!,
-                                                  ),
-                                                  width: 40,
-                                                  height: 40,
-                                                  fit: BoxFit.cover,
-                                                ))
+                                            : File(item['product'].imageUrl!).existsSync()
+                                                ? Image.file(
+                                                    File(item['product'].imageUrl!),
+                                                    width: 40,
+                                                    height: 40,
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : const Icon(Icons.inventory_2))
                                         : const Icon(Icons.inventory_2),
                                     title: Text(item['product'].name),
                                     subtitle: Column(
