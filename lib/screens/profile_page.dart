@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
 import '../utils/app_theme_provider.dart';
+import '../services/cloudinary_service.dart';
 
 class ProfilePage extends StatefulWidget {
   final String? uid;
@@ -222,27 +222,18 @@ class _ProfilePageState extends State<ProfilePage> {
         localSavedPath = _logoFile!.path;
       }
 
-      // 3. UPLOAD TO FIREBASE (Cloud Sync)
+      // 3. UPLOAD TO CLOUDINARY
       try {
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('uploads')
-            .child('images')
-            .child(fileName);
-
-        debugPrint('Uploading to Firebase: uploads/images/$fileName');
-        await storageRef.putFile(_logoFile!);
-        final downloadUrl = await storageRef.getDownloadURL();
-        debugPrint('Firebase Download URL: $downloadUrl');
-
-        // Return Cloud URL if successful
-        return downloadUrl;
-      } catch (firebaseError) {
-        debugPrint('Firebase Upload Failed: $firebaseError');
-
-        // Return local path fallback so UI updates
-        debugPrint('Returning local path fallback: $localSavedPath');
-        return localSavedPath;
+        debugPrint('Uploading to Cloudinary...');
+        String? cloudinaryUrl = await CloudinaryService.uploadImage(_logoFile!, folder: "images");
+        if (cloudinaryUrl != null) {
+          debugPrint('Cloudinary Download URL: $cloudinaryUrl');
+          return cloudinaryUrl;
+        }
+        return localSavedPath ?? _logoFile!.path;
+      } catch (cloudinaryError) {
+        debugPrint('Cloudinary Upload Failed: $cloudinaryError');
+        return localSavedPath ?? _logoFile!.path;
       }
     } catch (e) {
       debugPrint('Critial error in _uploadLogo: $e');

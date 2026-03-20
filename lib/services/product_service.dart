@@ -1,16 +1,15 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../models/product_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'cloudinary_service.dart';
 
 class ProductService {
   late final CollectionReference _productsCollection;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final String _uid;
 
   ProductService() : _uid = FirebaseAuth.instance.currentUser?.uid ?? '' {
@@ -108,13 +107,7 @@ class ProductService {
   Future<void> deleteProduct(String id, String? imageUrl) async {
     try {
       await _productsCollection.doc(id).delete();
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        try {
-          await _storage.refFromURL(imageUrl).delete();
-        } catch (e) {
-          debugPrint("Error deleting image: $e");
-        }
-      }
+      // Cloudinary image deletion logic is skipped here.
     } catch (e) {
       debugPrint("Error deleting product: $e");
       throw Exception('Failed to delete product');
@@ -146,21 +139,16 @@ class ProductService {
       localSavedPath = file.path; // Fallback to original
     }
 
-    // 3. UPLOAD TO FIREBASE
+    // 3. UPLOAD TO CLOUDINARY
     try {
-      Reference ref = _storage
-          .ref()
-          .child('uploads')
-          .child('products')
-          .child(fileName);
-      UploadTask uploadTask = ref.putFile(file);
-      TaskSnapshot snapshot = await uploadTask;
-      String downloadUrl = await snapshot.ref.getDownloadURL();
-      return downloadUrl;
+      String? cloudinaryUrl = await CloudinaryService.uploadImage(file, folder: "products");
+      if (cloudinaryUrl != null) {
+        return cloudinaryUrl;
+      }
+      return localSavedPath ?? file.path;
     } catch (e) {
       debugPrint("Error uploading image: $e");
-      // Fallback to local path
-      return localSavedPath;
+      return localSavedPath ?? file.path;
     }
   }
 }

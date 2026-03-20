@@ -4,11 +4,11 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'services/cloudinary_service.dart';
 
 import 'utils/app_theme_provider.dart';
 
@@ -66,9 +66,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   Future<String?> _uploadImage(File image, String path) async {
     try {
-      final ref = FirebaseStorage.instance.ref().child(path);
-      await ref.putFile(image);
-      return await ref.getDownloadURL();
+      // We'll pass the path segment as Cloudinary folder (e.g. "shops/uid/logo")
+      List<String> segments = path.split('/');
+      segments.removeLast(); // remove filename to get just the folder path
+      String folder = segments.join('/');
+
+      String? cloudinaryUrl = await CloudinaryService.uploadImage(image, folder: folder.isNotEmpty ? folder : "shops");
+      return cloudinaryUrl;
     } catch (e) {
       debugPrint('Error uploading image: $e');
       return null;

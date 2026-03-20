@@ -1,15 +1,14 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../models/customer_model.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'cloudinary_service.dart';
 
 class CustomerService {
   final CollectionReference _customersCollection = FirebaseFirestore.instance
       .collection('customers');
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // Create
   Future<void> addCustomer(CustomerModel customer, File? imageFile) async {
@@ -98,13 +97,7 @@ class CustomerService {
   Future<void> deleteCustomer(String id, String? imageUrl) async {
     try {
       await _customersCollection.doc(id).delete();
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        try {
-          await _storage.refFromURL(imageUrl).delete();
-        } catch (e) {
-          debugPrint("Error deleting customer image: $e");
-        }
-      }
+      // Cloudinary image deletion logic is skipped here.
     } catch (e) {
       debugPrint("Error deleting customer: $e");
       throw Exception('Failed to delete customer');
@@ -137,21 +130,16 @@ class CustomerService {
       localSavedPath = file.path;
     }
 
-    // 3. UPLOAD TO FIREBASE
+    // 3. UPLOAD TO CLOUDINARY
     try {
-      Reference ref = _storage
-          .ref()
-          .child('uploads')
-          .child('customers')
-          .child(fileName);
-      UploadTask uploadTask = ref.putFile(file);
-      TaskSnapshot snapshot = await uploadTask;
-      String downloadUrl = await snapshot.ref.getDownloadURL();
-      return downloadUrl;
+      String? cloudinaryUrl = await CloudinaryService.uploadImage(file, folder: "customers");
+      if (cloudinaryUrl != null) {
+        return cloudinaryUrl;
+      }
+      return localSavedPath ?? file.path;
     } catch (e) {
       debugPrint("Error uploading customer image: $e");
-      // Fallback to local path
-      return localSavedPath;
+      return localSavedPath ?? file.path;
     }
   }
 }
