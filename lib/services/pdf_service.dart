@@ -219,7 +219,7 @@ class PdfService {
                 ],
               ),
 
-              pw.SizedBox(height: 16),
+              pw.SizedBox(height: 8),
 
               if (!isTransporter) ...[
                 // Standard Products Table (Original for Recipient)
@@ -230,54 +230,112 @@ class PdfService {
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
-                pw.SizedBox(height: 8),
+                pw.SizedBox(height: 4),
 
                 pw.Table(
                   border: pw.TableBorder.all(color: tableBorderColor),
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(3), // Item Name
+                    1: const pw.FlexColumnWidth(1.5), // HSN
+                    2: const pw.FlexColumnWidth(1), // Qty
+                    3: const pw.FlexColumnWidth(1.5), // MRP
+                    4: const pw.FlexColumnWidth(1.5), // Rate
+                    5: const pw.FlexColumnWidth(1.5), // Tax
+                    6: const pw.FlexColumnWidth(1.5), // Amount
+                  },
                   children: [
                     pw.TableRow(
                       decoration: pw.BoxDecoration(color: tableHeaderColor),
                       children: [
                         pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
                           child: pw.Text(
                             'Item',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
                           ),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
                           child: pw.Text(
                             'HSN',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
                           ),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
                           child: pw.Text(
                             'Qty',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
                           ),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
                           child: pw.Text(
                             'MRP',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
                           ),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
                           child: pw.Text(
                             'Rate',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
                           ),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.all(8),
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: pw.Text(
+                            'Tax',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
                           child: pw.Text(
                             'Amount',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
                           ),
                         ),
                       ],
@@ -286,161 +344,278 @@ class PdfService {
                       return pw.TableRow(
                         children: [
                           pw.Padding(
-                            padding: const pw.EdgeInsets.all(8),
-                            child: pw.Text(item.productName),
+                            padding: const pw.EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 4,
+                            ),
+                            child: pw.Text(
+                              item.productName,
+                              style: const pw.TextStyle(fontSize: 8),
+                            ),
                           ),
                           pw.Padding(
-                            padding: const pw.EdgeInsets.all(8),
-                            child: pw.Text(item.hsnCode),
+                            padding: const pw.EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 4,
+                            ),
+                            child: pw.Text(
+                              item.hsnCode,
+                              style: const pw.TextStyle(fontSize: 8),
+                            ),
                           ),
                           pw.Padding(
-                            padding: const pw.EdgeInsets.all(8),
-                            child: pw.Text(item.quantity.toString()),
+                            padding: const pw.EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 4,
+                            ),
+                            child: pw.Text(
+                              item.quantity.toString(),
+                              style: const pw.TextStyle(fontSize: 8),
+                            ),
                           ),
                           pw.Padding(
-                            padding: const pw.EdgeInsets.all(8),
-                            child: pw.Text('₹${item.mrp.toStringAsFixed(2)}'),
+                            padding: const pw.EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 4,
+                            ),
+                            child: pw.Text(
+                              '₹${item.mrp.toStringAsFixed(2)}',
+                              style: const pw.TextStyle(fontSize: 8),
+                            ),
                           ),
                           pw.Padding(
-                            padding: const pw.EdgeInsets.all(8),
-                            child: pw.Text('₹${item.rate.toStringAsFixed(2)}'),
+                            padding: const pw.EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 4,
+                            ),
+                            child: pw.Text(
+                              '₹${item.rate.toStringAsFixed(2)}',
+                              style: const pw.TextStyle(fontSize: 8),
+                            ),
                           ),
                           pw.Padding(
-                            padding: const pw.EdgeInsets.all(8),
+                            padding: const pw.EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 4,
+                            ),
+                            child: pw.Text(
+                              '${sale.gstPercent % 1 == 0 ? sale.gstPercent.toInt() : sale.gstPercent}%',
+                              style: const pw.TextStyle(fontSize: 8),
+                            ),
+                          ),
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 4,
+                            ),
                             child: pw.Text(
                               '₹${item.amount.toStringAsFixed(2)}',
+                              style: const pw.TextStyle(fontSize: 8),
                             ),
                           ),
                         ],
                       );
                     }),
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: tableHeaderColor),
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: pw.Text(
+                            'Total',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: pw.Text(
+                            '',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: pw.Text(
+                            sale.items
+                                .fold(0, (sum, item) => sum + item.quantity)
+                                .toString(),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: pw.Text(
+                            '',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: pw.Text(
+                            '',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: pw.Text(
+                            '₹${sale.gstAmount.toStringAsFixed(2)}',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: pw.Text(
+                            '₹${sale.subtotal.toStringAsFixed(2)}',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
 
-                pw.SizedBox(height: 16),
+                pw.SizedBox(height: 8),
 
-                // Subtotal
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(16),
-                  decoration: pw.BoxDecoration(
-                    borderRadius: pw.BorderRadius.circular(12),
-                    border: pw.Border.all(color: companyBorderColor),
-                  ),
-                  child: pw.Column(
-                    children: [
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                            'Subtotal:',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                // Subtotal section (Tax and Final Amounts Table)
+                (() {
+                  Set<String> uniqueHsns = sale.items
+                      .map((e) => e.hsnCode)
+                      .toSet();
+                  List<String> hsnList = uniqueHsns.toList();
+                  String hsnDisplay = '';
+                  if (hsnList.length > 2) {
+                    hsnDisplay = '${hsnList[0]}, ${hsnList[1]} ...more';
+                  } else {
+                    hsnDisplay = hsnList.join(', ');
+                  }
+                  double discountVal =
+                      sale.subtotal * sale.discountPercent / 100;
+                  double taxableVal = sale.subtotal - discountVal;
+
+                  return pw.Container(
+                    width: double.infinity,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: tableBorderColor),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                      children: [
+                        // ROW 1: HSN and Tax Details
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 8,
                           ),
-                          pw.Text(
-                            '₹${sale.subtotal.toStringAsFixed(2)}',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      if (sale.discountPercent > 0) ...[
-                        pw.SizedBox(height: 8),
-                        pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                          children: [
-                            pw.Text(
-                              'Discount (${sale.discountPercent}%):',
-                              style: pw.TextStyle(color: PdfColors.red),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border(
+                              bottom: pw.BorderSide(color: tableBorderColor),
                             ),
-                            pw.Text(
-                              '-₹${(sale.subtotal * sale.discountPercent / 100).toStringAsFixed(2)}',
-                              style: pw.TextStyle(
-                                color: PdfColors.red,
-                                fontWeight: pw.FontWeight.bold,
+                          ),
+                          child: pw.Row(
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text(
+                                'HSN: $hsnDisplay',
+                                style: const pw.TextStyle(fontSize: 8),
                               ),
-                            ),
-                          ],
+                              pw.Text(
+                                'Taxable Value: ₹${taxableVal.toStringAsFixed(2)}',
+                                style: const pw.TextStyle(fontSize: 8),
+                              ),
+                              pw.Text(
+                                'CGST (${(sale.gstPercent / 2).toStringAsFixed(1)}%): ₹${(sale.gstAmount / 2).toStringAsFixed(2)}',
+                                style: const pw.TextStyle(fontSize: 8),
+                              ),
+                              pw.Text(
+                                'SGST (${(sale.gstPercent / 2).toStringAsFixed(1)}%): ₹${(sale.gstAmount / 2).toStringAsFixed(2)}',
+                                style: const pw.TextStyle(fontSize: 8),
+                              ),
+                              pw.Text(
+                                'Total Tax: ₹${sale.gstAmount.toStringAsFixed(2)}',
+                                style: const pw.TextStyle(fontSize: 8),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // ROW 2: Discount and Final Paid
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(
+                            vertical: 6,
+                            horizontal: 8,
+                          ),
+                          color: tableHeaderColor,
+                          child: pw.Row(
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text(
+                                sale.discountPercent > 0
+                                    ? 'Total Discount (${sale.discountPercent}%): -₹${discountVal.toStringAsFixed(2)}'
+                                    : '',
+                                style: pw.TextStyle(
+                                  color: PdfColors.red,
+                                  fontSize: 10,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
+                              pw.Text(
+                                'Final Amount (with GST): ₹${sale.totalAmount.toStringAsFixed(2)}',
+                                style: pw.TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                      pw.SizedBox(height: 8),
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                            'Taxable Amount:',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                          pw.Text(
-                            '₹${(sale.subtotal - (sale.subtotal * sale.discountPercent / 100)).toStringAsFixed(2)}',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      pw.SizedBox(height: 8),
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                            'Total GST (${sale.gstPercent}%):',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                          pw.Text(
-                            '₹${sale.gstAmount.toStringAsFixed(2)}',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      pw.SizedBox(height: 8),
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                            'IGST / SGST (${(sale.gstPercent / 2).toStringAsFixed(1)}%):',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                          pw.Text(
-                            '₹${(sale.gstAmount / 2).toStringAsFixed(2)}',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      pw.SizedBox(height: 8),
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                            'CGST (${(sale.gstPercent / 2).toStringAsFixed(1)}%):',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                          pw.Text(
-                            '₹${(sale.gstAmount / 2).toStringAsFixed(2)}',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      pw.Divider(height: 16, thickness: 1),
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                            'Total Amount:',
-                            style: pw.TextStyle(
-                              fontSize: 18,
-                              fontWeight: pw.FontWeight.bold,
-                            ),
-                          ),
-                          pw.Text(
-                            '₹${sale.totalAmount.toStringAsFixed(2)}',
-                            style: pw.TextStyle(
-                              fontSize: 18,
-                              fontWeight: pw.FontWeight.bold,
-                              color: PdfColors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                      pw.SizedBox(height: 8),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                })(),
               ] else ...[
                 // HSN Summary for Transporter
                 pw.Text(
@@ -651,32 +826,62 @@ class PdfService {
                 })(),
               ],
 
-              pw.SizedBox(height: 32),
-
-              // Authorization/Signature
               pw.SizedBox(height: 16),
-              pw.Align(
-                alignment: pw.Alignment.centerRight,
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text(
-                      companyData?['name'] ?? 'Company Name',
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        fontSize: 14,
+
+              // Authorization/Signature and Terms
+              pw.SizedBox(height: 8),
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'Terms & Conditions:',
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          '1. Goods once sold will not be taken back.',
+                          style: const pw.TextStyle(fontSize: 8),
+                        ),
+                        pw.Text(
+                          '2. Subject to jurisdiction.',
+                          style: const pw.TextStyle(fontSize: 8),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        companyData?['name'] ?? 'Company Name',
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        textAlign: pw.TextAlign.right,
                       ),
-                      textAlign: pw.TextAlign.right,
-                    ),
-                    pw.SizedBox(height: 40),
-                    pw.Container(height: 1, width: 200, color: PdfColors.black),
-                    pw.SizedBox(height: 4),
-                    pw.Text(
-                      'Authorized Signatory',
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                    ),
-                  ],
-                ),
+                      pw.SizedBox(height: 16),
+                      pw.Container(
+                        height: 1,
+                        width: 200,
+                        color: PdfColors.black,
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Authorized Signatory',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
               ),
 
               pw.SizedBox(height: 32),

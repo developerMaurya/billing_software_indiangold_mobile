@@ -27,6 +27,10 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
   DateTime? _endDate;
   String _searchQuery = '';
 
+  // Pagination State
+  int _currentPage = 1;
+  final int _itemsPerPage = 10;
+
   final List<String> _filterOptions = [
     'All',
     'Today',
@@ -51,6 +55,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text.toLowerCase();
+      _currentPage = 1;
     });
   }
 
@@ -58,6 +63,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     final now = DateTime.now();
     setState(() {
       _selectedFilter = filter;
+      _currentPage = 1;
       switch (filter) {
         case 'Today':
           _startDate = DateTime(now.year, now.month, now.day);
@@ -297,16 +303,98 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                       ),
                     ),
 
-                    // Sales List
+                    // Sales List (Paginated)
                     Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filteredSales.length,
-                        itemBuilder: (context, index) {
-                          final sale = filteredSales[index];
-                          return _buildSaleCard(sale, appTheme);
-                        },
-                      ),
+                      child: (() {
+                        if (filteredSales.isEmpty) return const SizedBox();
+                        final totalPages =
+                            (filteredSales.length / _itemsPerPage).ceil();
+
+                        // Failsafe if total pages changed (e.g. from filtering)
+                        if (_currentPage > totalPages) {
+                          _currentPage = 1;
+                        }
+
+                        final startIndex = (_currentPage - 1) * _itemsPerPage;
+                        int endIndex = startIndex + _itemsPerPage;
+                        if (endIndex > filteredSales.length) {
+                          endIndex = filteredSales.length;
+                        }
+
+                        final paginatedSales = filteredSales.sublist(
+                          startIndex,
+                          endIndex,
+                        );
+
+                        return Column(
+                          children: [
+                            Expanded(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: paginatedSales.length,
+                                itemBuilder: (context, index) {
+                                  final sale = paginatedSales[index];
+                                  return _buildSaleCard(sale, appTheme);
+                                },
+                              ),
+                            ),
+                            if (totalPages > 1)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                  horizontal: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border(
+                                    top: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: _currentPage > 1
+                                          ? () => setState(() => _currentPage--)
+                                          : null,
+                                      icon: const Icon(
+                                        Icons.arrow_back_ios,
+                                        size: 14,
+                                      ),
+                                      label: const Text('Previous'),
+                                    ),
+                                    Text(
+                                      'Page $_currentPage of $totalPages',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: _currentPage < totalPages
+                                          ? () => setState(() => _currentPage++)
+                                          : null,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const [
+                                          Text('Next'),
+                                          SizedBox(width: 4),
+                                          Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 14,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        );
+                      })(),
                     ),
                   ],
                 );
@@ -342,8 +430,8 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                     ),
                   ),
                   Text(
-                    DateFormat('dd/MM/yyyy').format(sale.saleDate),
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    DateFormat('dd/MM/yyyy, hh:mm a').format(sale.saleDate),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
                   ),
                 ],
               ),
