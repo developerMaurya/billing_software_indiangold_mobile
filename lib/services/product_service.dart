@@ -141,14 +141,19 @@ class ProductService {
 
     // 3. UPLOAD TO CLOUDINARY
     try {
-      String? cloudinaryUrl = await CloudinaryService.uploadImage(file, folder: "products");
+      String? cloudinaryUrl = await CloudinaryService.uploadImage(
+        file,
+        folder: "products",
+      );
       if (cloudinaryUrl != null) {
         return cloudinaryUrl;
       }
-      return localSavedPath ?? file.path;
+      throw Exception(
+        "Cloudinary upload returned null (Check API keys or internet)",
+      );
     } catch (e) {
       debugPrint("Error uploading image: $e");
-      return localSavedPath ?? file.path;
+      throw Exception("Failed to upload image to Cloudinary: $e");
     }
   }
 }

@@ -71,7 +71,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
       segments.removeLast(); // remove filename to get just the folder path
       String folder = segments.join('/');
 
-      String? cloudinaryUrl = await CloudinaryService.uploadImage(image, folder: folder.isNotEmpty ? folder : "shops");
+      String? cloudinaryUrl = await CloudinaryService.uploadImage(
+        image,
+        folder: folder.isNotEmpty ? folder : "shops",
+      );
       return cloudinaryUrl;
     } catch (e) {
       debugPrint('Error uploading image: $e');

@@ -225,15 +225,22 @@ class _ProfilePageState extends State<ProfilePage> {
       // 3. UPLOAD TO CLOUDINARY
       try {
         debugPrint('Uploading to Cloudinary...');
-        String? cloudinaryUrl = await CloudinaryService.uploadImage(_logoFile!, folder: "images");
+        String? cloudinaryUrl = await CloudinaryService.uploadImage(
+          _logoFile!,
+          folder: "images",
+        );
         if (cloudinaryUrl != null) {
           debugPrint('Cloudinary Download URL: $cloudinaryUrl');
           return cloudinaryUrl;
         }
-        return localSavedPath ?? _logoFile!.path;
+        throw Exception(
+          "Cloudinary upload returned null (Check API keys or internet)",
+        );
       } catch (cloudinaryError) {
         debugPrint('Cloudinary Upload Failed: $cloudinaryError');
-        return localSavedPath ?? _logoFile!.path;
+        throw Exception(
+          "Failed to upload image to Cloudinary: $cloudinaryError",
+        );
       }
     } catch (e) {
       debugPrint('Critial error in _uploadLogo: $e');
